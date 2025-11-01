@@ -3,7 +3,8 @@
 std::vector<std::byte> BEncode::encode64Int(const int64_t& bint){
     std::vector<std::byte> bint_byte_array{};
     std::string integer_representation {"i"};
-    integer_representation += std::to_string(bint) += "e";
+    integer_representation += std::to_string(bint);
+    integer_representation += "e";
     for(char bchar : integer_representation){
        bint_byte_array.push_back(static_cast<std::byte>(bchar)); 
     }
@@ -22,15 +23,18 @@ std::vector<std::byte> BEncode::encodeString(const std::string& bstring){
 
 std::vector<std::byte> BEncode::encodeList(const std::vector<BValue>& blist){
     std::vector<std::byte> blist_byte_array{};
-    for (BValue bvalue : blist){
+    blist_byte_array.push_back(static_cast<std::byte>('l'));
+    for (const BValue& bvalue : blist){
       std::vector<std::byte> bvalue_byte_array= encodeObject(bvalue);
       blist_byte_array.insert(blist_byte_array.end(), bvalue_byte_array.begin(), bvalue_byte_array.end());
     }
+    blist_byte_array.push_back(static_cast<std::byte>('e'));
     return blist_byte_array;
 };
 
 std::vector<std::byte> BEncode::encodeDict(const std::map<std::string, BValue>& bmap){
   std::vector<std::byte> bmap_byte_array;
+  bmap_byte_array.push_back(static_cast<std::byte>('d'));
   std::map<std::string, BValue>::const_iterator it;
   for(it = bmap.begin(); it != bmap.end(); it++){
     std::vector<std::byte> bstring_byte_vector {encodeString(it->first)};
@@ -38,6 +42,7 @@ std::vector<std::byte> BEncode::encodeDict(const std::map<std::string, BValue>& 
     bmap_byte_array.insert(bmap_byte_array.end(), bstring_byte_vector.begin(), bstring_byte_vector.end());
     bmap_byte_array.insert(bmap_byte_array.end(), bvalue_byte_vector.begin(), bvalue_byte_vector.end());
   }
+  bmap_byte_array.push_back(static_cast<std::byte>('e'));
   return bmap_byte_array;
 
 }
@@ -59,7 +64,4 @@ std::vector<std::byte> BEncode::encodeObject(const BValue& bvalue){
   }else{
     throw std::invalid_argument("The argument does not match any function.");
   }
-
-
-
 }
