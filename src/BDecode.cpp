@@ -5,21 +5,6 @@ BDecode::BDecode(std::vector<std::byte>& byte_array)
   {
   }
 
-BValue BDecode::parseEncodedData(){
-  if(m_byte_array[0] == m_dict_start){
-    std::pair<size_t, BValue> main_pair{parseBValue(static_cast<size_t>(0))};
-    if(main_pair.first == std::size(m_byte_array)){
-      std::cout << "Good.";
-    }else{
-      std::cout << "Not Good.";
-    }
-    BValue main_bvalue_map{main_pair.second};
-    return main_bvalue_map;
-  }else{
-      std::cout << ".torrent file is ill-formed";
-  }
-}
-
 std::pair<size_t, BValue> BDecode::parseBString(size_t curr_pos){
   if(!isString(m_byte_array[curr_pos])){
     throw std::invalid_argument("Invalid BString: first byte has to contain a digit");
