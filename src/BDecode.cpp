@@ -5,6 +5,16 @@ BDecode::BDecode(std::vector<std::byte>& byte_array)
   {
   }
 
+BValue BDecode::parseByteArray(){
+  try{
+  std::pair<size_t, BValue> pair {parseBValue(0)};
+  std::cout << "Byte array was successfully decoded." << '\n';
+  return pair.second;
+  }catch(const std::invalid_argument& e){
+    std::cerr << "Byte array is invalid" << e.what();
+    return BValue{};
+  }
+}
 std::pair<size_t, BValue> BDecode::parseBString(size_t curr_pos){
   if(!isString(m_byte_array[curr_pos])){
     throw std::invalid_argument("Invalid BString: first byte has to contain a digit");

@@ -9,6 +9,6 @@
 
 struct BValue{
   using ValueType = std::variant<int64_t, std::string, std::map<std::string, BValue>, std::vector<BValue>>;
-  ValueType value;
+  ValueType value;  
 };
 #endif

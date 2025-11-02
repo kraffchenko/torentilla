@@ -1,0 +1,21 @@
+#include "MetainfoHandler.h"
+
+Metainfo MetainfoHandler::createMetainfo(std::string& path){
+  std::ifstream file{path, std::ios::binary};
+  file.seekg(0, std::ios::end);
+  std::streampos file_size{file.tellg()};
+  file.seekg(0, std::ios::beg);
+  std::vector<std::byte> file_data(static_cast<size_t>(file_size));
+  file.read( reinterpret_cast<char*>(file_data.data()), static_cast<long>(file_size) );
+
+  BDecode decoder {file_data};
+  BValue decoded_dict {decoder.parseByteArray()};
+
+  std::map<std::string, BValue> general_dict {std::get<std::map<std::string, BValue>>(decoded_dict.value)};
+  std::string_view announce{std::get<std::string>(general_dict.at("announce").value)};
+
+
+  
+};
+
+
