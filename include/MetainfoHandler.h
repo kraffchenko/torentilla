@@ -17,23 +17,29 @@ public:
   Metainfo createMetainfo(std::string& path);
 private:
   template<typename T>
-  T getValue(std::map<std::string, BValue>&, std::string_view);
-
+  T getValue(const std::map<std::string, BValue>&, const std::string& key);
+  template<typename T>
+  std::optional<T> getValueOpt(const std::map<std::string, BValue>&, const std::string& key);
 };
 
 
 template<typename T>
-T MetainfoHandler::getValue(std::map<std::string, BValue>& map_ref, std::string_view key){
-  std::vector<std::string> optional_keys{};
+T MetainfoHandler::getValue(const std::map<std::string, BValue>& map_ref, const std::string& key){
+
   if(map_ref.count(key) == 0){
-    if (optional_keys.contains(key)){
-      return std::nullopt;
-    }else{
-      throw std::invalid_argument("Key doesnt exist");
-    }
+    throw std::invalid_argument("MetainfoHandler::getValue: Map does not contain a neccessary key");
   }else{
-   return map_ref.at(key); 
+   return std::get<T>(map_ref.at(key).value); 
   }
-} 
+}
+
+template<typename T>
+std::optional<T> MetainfoHandler::getValueOpt(const std::map<std::string, BValue>& map_ref, const std::string& key){
+  if(map_ref.count(key) == 0){
+    return std::nullopt;
+  }else{
+    return std::get<T>(map_ref.at(key).value);
+  }
+}
 
 #endif
