@@ -21,6 +21,7 @@ Metainfo MetainfoHandler::createMetainfo(std::string& path){
       getValue<std::string>(info_dict,  "pieces"),
       getValue<std::string>(info_dict, "name"),
       getValue<int64_t>(info_dict, "length"),
+      getValueOpt<std::vector<std::vector<std::string>>>(general_dict, "announce-list"),
       getValueOpt<int64_t>(general_dict, "creation date"),
       getValueOpt<std::string>(general_dict, "comment"),
       getValueOpt<std::string>(general_dict, "created by"),
@@ -34,5 +35,7 @@ Metainfo MetainfoHandler::createMetainfo(std::string& path){
   }
 
 };
+
+
 
 
