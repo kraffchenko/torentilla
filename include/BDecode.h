@@ -31,7 +31,6 @@ private:
   std::pair<size_t, BValue>  parseBString(size_t);
   int returnRange(std::string_view);
   bool isString(std::byte);
-
   bool intIsValid(size_t, size_t);
 };
 

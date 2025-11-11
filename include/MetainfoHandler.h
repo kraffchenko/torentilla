@@ -6,6 +6,7 @@
 #include <vector>
 #include <map>
 #include <fstream>
+#include <algorithm>
 
 #include "BValue.h"
 #include "BDecode.h"
@@ -21,6 +22,12 @@ private:
   template<typename T>
   std::optional<T> getValueOpt(const std::map<std::string, BValue>&, const std::string& key);
   std::optional<std::vector<std::vector<std::string>>> getValueOptList(const std::map<std::string, BValue>&, const std::string& key);
+  std::vector<std::byte> returnRawInfo(std::vector<std::byte>&);
+  void parseElement(size_t pos, std::vector<std::byte>&);
+  size_t addString(size_t pos, std::vector<std::byte>&);
+  size_t addInt(size_t pos, std::vector<std::byte>&);
+  size_t addList(size_t pos, std::vector<std::byte>&);
+  size_t addDict(size_t pos, std::vector<std::byte>&);
 };
 
 
