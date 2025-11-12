@@ -1,7 +1,7 @@
 #include "Metainfo.h"
 
 Metainfo::Metainfo(std::string_view announce, int64_t piece_length, std::string_view pieces, std::string_view name,
-        int64_t length, std::optional<std::vector<std::vector<std::string>>> announce_list=std::nullopt, std::optional<int64_t>  creation_date=std::nullopt, std::optional<std::string_view> comment=std::nullopt, 
+        int64_t length, std::string_view info_hash, std::optional<std::vector<std::vector<std::string>>> announce_list=std::nullopt, std::optional<int64_t>  creation_date=std::nullopt, std::optional<std::string_view> comment=std::nullopt, 
         std::optional<std::string_view> created_by=std::nullopt, std::optional<std::string_view> encoding=std::nullopt,
         std::optional<int> is_private=std::nullopt, std::optional<std::string_view> md5sum=std::nullopt)
 

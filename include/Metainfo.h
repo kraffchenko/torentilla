@@ -8,7 +8,7 @@
 class Metainfo {
 public:
   Metainfo(std::string_view announce, int64_t piece_length, std::string_view pieces, std::string_view name,
-           int64_t length, std::optional<std::vector<std::vector<std::string>>> announce_list, std::optional<int64_t> creation_date, std::optional<std::string_view> comment, std::optional<std::string_view> created_by, std::optional<std::string_view> encoding,
+           int64_t length, std::string_view info_hash, std::optional<std::vector<std::vector<std::string>>> announce_list, std::optional<int64_t> creation_date, std::optional<std::string_view> comment, std::optional<std::string_view> created_by, std::optional<std::string_view> encoding,
            std::optional<int> is_private, std::optional<std::string_view> md5sum);
   Metainfo() = delete;
 
@@ -17,6 +17,7 @@ public:
   const std::string_view getPieces() const { return m_pieces; };
   std::string_view getName() const { return m_name; };
   int64_t getLength() const { return m_length; };
+  std::string_view getInfoHash() const { return m_info_hash; }; 
 
   std::optional<std::string_view> getComment() const { return m_comment; };
   std::optional<std::string_view> getEncoding() const { return m_encoding; };
@@ -33,6 +34,7 @@ private:
   const int64_t m_piece_length{};
   const std::string m_pieces{};
   const int64_t m_length{};
+  const std::string m_info_hash{};
 
   const std::optional<std::vector<std::vector<std::string>>> m_announce_list{};
   const std::optional<int64_t> m_creation_date{};
