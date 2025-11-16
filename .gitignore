@@ -3,3 +3,5 @@ tests/
 .cache
 build/
 CMakeLists.txt
+main.cpp
+apps/

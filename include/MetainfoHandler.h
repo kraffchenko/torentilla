@@ -13,6 +13,7 @@
 #include "BEncode.h"
 #include "Metainfo.h"
 #include <boost/compute/detail/sha1.hpp>  
+#include <openssl/evp.h>
 
 class MetainfoHandler{
 public:
@@ -23,7 +24,7 @@ private:
   template<typename T>
   std::optional<T> getValueOpt(const std::map<std::string, BValue>&, const std::string& key);
   std::optional<std::vector<std::vector<std::string>>> getValueOptList(const std::map<std::string, BValue>&, const std::string& key);
-  std::string returnInfoValueHash(std::map<std::string, BValue>&);
+  std::array<std::byte, 20> returnInfoValueHash(const std::map<std::string, BValue>&);
   void parseElement(size_t pos, std::vector<std::byte>&);
   size_t addString(size_t pos, std::vector<std::byte>&);
   size_t addInt(size_t pos, std::vector<std::byte>&);
