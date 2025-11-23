@@ -14,11 +14,13 @@ std::string TrackerRequest::url_encode(std::array<std::byte, 20> byte_array){
   return encoded_string;
 }
  size_t TrackerRequest::callback(char* data, size_t size, size_t nmemb, void* clientp){
-  static_cast<std::string*>(clientp) -> append(data, size * nmemb);
+  std::vector<std::byte>* byte_array{static_cast<std::vector<std::byte>*>(clientp)};
+  const std::byte* casted_data_pointer {reinterpret_cast<const std::byte*>(data)};
+  byte_array -> insert(byte_array->end(), casted_data_pointer, casted_data_pointer + size*nmemb);
   return size * nmemb;
 }
-void TrackerRequest::trackerGetRequest(TorrentDownload& download_structure, std::array<std::byte, 20> peer_id){
-  std::string response{};
+std::vector<std::byte> TrackerRequest::trackerGetRequest(TorrentDownload& download_structure, std::array<std::byte, 20> peer_id){
+  std::vector<std::byte> response{};
   std::string request_url{
     std::string{download_structure.getAnnounce()}
     + "?info_hash=" + url_encode(download_structure.getInfoHash())
@@ -38,9 +40,9 @@ void TrackerRequest::trackerGetRequest(TorrentDownload& download_structure, std:
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     CURLcode result {curl_easy_perform(curl)};
+    std::cout << result << '\n';
     curl_easy_cleanup(curl);    
   }
-  std::cout << response << '\n';
-  
+  return response;
 }
 
