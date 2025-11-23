@@ -13,8 +13,6 @@ Metainfo MetainfoHandler::createMetainfo(std::string& path){
   BDecode decoder {file_data};
   BValue decoded_dict {decoder.parseByteArray()};
   
-
-
   std::map<std::string, BValue> general_dict {std::get<std::map<std::string, BValue>>(decoded_dict.value)};
   std::map<std::string, BValue> info_dict{std::get<std::map<std::string, BValue>>(general_dict.at("info").value)};
   try{
