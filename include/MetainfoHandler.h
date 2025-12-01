@@ -12,19 +12,23 @@
 #include "BDecode.h"
 #include "BEncode.h"
 #include "Metainfo.h"
+#include "DotTorrentConfig.h"
 #include <boost/compute/detail/sha1.hpp>  
 #include <openssl/evp.h>
 
 class MetainfoHandler{
 public:
   Metainfo createMetainfo(std::string& path);
+  Metainfo createDotTorrent(DotTorrentConfig& config);
 private:
   template<typename T>
   T getValue(const std::map<std::string, BValue>&, const std::string& key);
   template<typename T>
   std::optional<T> getValueOpt(const std::map<std::string, BValue>&, const std::string& key);
   std::optional<std::vector<std::vector<std::string>>> getValueOptList(const std::map<std::string, BValue>&, const std::string& key);
-  std::array<std::byte, 20> returnInfoValueHash(const std::map<std::string, BValue>&);
+  std::array<std::byte, 20> returnSHA1(std::vector<std::byte>& data);
+  std::string createPiecesString(std::ifstream& file_ref);
+  void addPieceString(std::string& pieces, std::ifstream& file_ref, int byte_array_size);
   void parseElement(size_t pos, std::vector<std::byte>&);
   size_t addString(size_t pos, std::vector<std::byte>&);
   size_t addInt(size_t pos, std::vector<std::byte>&);

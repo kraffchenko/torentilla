@@ -43,6 +43,9 @@ std::vector<std::byte> TrackerRequest::trackerGetRequest(TorrentDownload& downlo
     std::cout << result << '\n';
     curl_easy_cleanup(curl);    
   }
+  for (std::byte byte : response){
+    std::cout << static_cast<char>(byte) << '\n';
+  }
   return response;
 }
 
