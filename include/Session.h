@@ -7,10 +7,10 @@
 #include <array>
 #include <iostream>
 
-#include "TorrentDownload.h"
-#include "TrackerRequest.h"
-#include "MetainfoHandler.h"
-#include "Metainfo.h"
+#include "torrent/Download.h"
+#include "net/Request.h"
+#include "metainfo/Handler.h"
+#include "metainfo/Data.h"
 
 class Session{
 public:

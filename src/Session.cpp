@@ -21,11 +21,9 @@ std::array<std::byte, 20> Session::generateID(){
   return peer_id;
 }
 void Session::downloadTorrent(std::string& path){
-  MetainfoHandler mh{};
-  Metainfo info {mh.createMetainfo(path)};
-  TorrentDownload td{info, true, true};
-  TrackerRequest tr{};
+  metainfo::Handler mh{};
+  metainfo::Data info {mh.createMetainfo(path)};
+  torrent::Download td{info, true, true};
+  net::Request tr{};
   tr.trackerGetRequest(td, m_peer_id);
-
-
 }
