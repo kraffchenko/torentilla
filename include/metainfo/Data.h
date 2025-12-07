@@ -1,18 +1,29 @@
-#ifndef METAINFO_H
-#define METAINFO_H
+#ifndef DATA_H
+#define DATA_H
 
 #include <iostream>
 #include <vector>
 #include <optional>
 #include <random>
 #include <array>
+#include <map>
+#include <fstream>
+#include "bencode/Value.h"
+#include "bencode/Decode.h"
+#include "bencode/Encode.h"
+#include "torrent/torrent.h"
+#include <boost/compute/detail/sha1.hpp>  
+#include <openssl/evp.h>
 
 namespace metainfo{
 class Data {
   public:
     Data(std::string_view announce, int64_t piece_length, std::string_view pieces, std::string_view name,
-             int64_t length, std::array<std::byte, 20> info_hash, std::optional<std::vector<std::vector<std::string>>> announce_list, std::optional<int64_t> creation_date, std::optional<std::string_view> comment, std::optional<std::string_view> created_by, std::optional<std::string_view> encoding,
-             std::optional<int> is_private, std::optional<std::string_view> md5sum);
+              int64_t length, std::array<std::byte, 20> info_hash, std::optional<std::vector<std::vector<std::string>>> announce_list, 
+              std::optional<int64_t> creation_date, std::optional<std::string_view> comment, std::optional<std::string_view> created_by, 
+              std::optional<std::string_view> encoding,
+              std::optional<int> is_private, std::optional<std::string_view> md5sum
+         );
     Data() = delete;
 
     const std::string_view getAnnounce() const { return m_announce; };
@@ -47,5 +58,45 @@ class Data {
     const std::optional<int> m_is_private{};
     const std::optional<std::string> m_md5sum{};
   };
+Data fromDotTorrent(std::string& path);
+  template<typename T>
+  inline T getValue(const std::map<std::string, bencode::Value>& map_ref, const std::string& key){
+
+    if(map_ref.count(key) == 0){
+      throw std::invalid_argument("metainfo::getValue: Map does not contain a neccessary key");
+    }else{
+     return std::get<T>(map_ref.at(key).value); 
+    }
+  }
+
+  template<typename T>
+  inline std::optional<T> getValueOpt(const std::map<std::string, bencode::Value>& map_ref, const std::string& key){
+    if(map_ref.count(key) == 0){
+      return std::nullopt;
+    }else{
+      return std::get<T>(map_ref.at(key).value);
+    }
+  }
+
+  template<>
+  inline std::optional<std::vector<std::vector<std::string>>> getValueOpt<std::vector<std::vector<std::string>>> (const std::map<std::string, bencode::Value>& map_ref, const std::string& key){
+   if(map_ref.count(key) == 0){
+      return std::nullopt;
+    }else{
+      std::vector<std::vector<std::string>> announces_list{};
+      const std::vector<bencode::Value>& bvalues_list {std::get<std::vector<bencode::Value>>(map_ref.at(key).value)};
+      announces_list.reserve(std::size(bvalues_list));
+      for (const bencode::Value& bvalue_announce_list : bvalues_list){
+        const std::vector<bencode::Value>& inner_bvalue_announce_list{std::get<std::vector<bencode::Value>>(bvalue_announce_list.value)};
+        std::vector<std::string> inner_announce_list{};
+        for(const bencode::Value& announce_string : inner_bvalue_announce_list){
+          inner_announce_list.push_back(std::move(std::get<std::string>(announce_string.value)));
+        }
+        announces_list.push_back(std::move(inner_announce_list));
+      }
+      return announces_list;
+    }
+  }
 }
+
 #endif

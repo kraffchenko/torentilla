@@ -4,12 +4,10 @@
 #include<array>
 #include <iostream>
 #include <random>
-#include <array>
 #include <iostream>
 
-#include "torrent/Download.h"
-#include "net/Request.h"
-#include "metainfo/Handler.h"
+#include "torrent/torrent.h"
+#include "net/utils/utils.h"
 #include "metainfo/Data.h"
 
 class Session{
@@ -17,6 +15,7 @@ public:
   Session();
   void downloadTorrent(std::string& path);
   std::array<std::byte, 20> const getPeerID(){ return m_peer_id;};
+  void createDotTorrent(torrent::Config config);
 private:
   static std::array<std::byte, 20> generateID();
   std::array<std::byte, 20>m_peer_id {};

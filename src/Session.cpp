@@ -1,6 +1,5 @@
 #include "Session.h"
 
-
 Session::Session()
 : m_peer_id{generateID()}
 {
@@ -21,9 +20,12 @@ std::array<std::byte, 20> Session::generateID(){
   return peer_id;
 }
 void Session::downloadTorrent(std::string& path){
-  metainfo::Handler mh{};
-  metainfo::Data info {mh.createMetainfo(path)};
-  torrent::Download td{info, true, true};
-  net::Request tr{};
-  tr.trackerGetRequest(td, m_peer_id);
+  metainfo::Data info {metainfo::fromDotTorrent(path)};
+}
+void Session::createDotTorrent(torrent::Config config){
+  if (!torrent::createDotTorrent(config)){
+    std::cout << "Error while creating a .torrent." << '\n';
+  }else{
+    std::cout << ".torrent file was created.";
+  }
 }
