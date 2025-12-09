@@ -1,7 +1,7 @@
-#include "metainfo/Data.h"
+#include "torrent/dottorrent/Metadata.h"
 #include "net/utils/utils.h"
-namespace metainfo{
-  Data::Data(std::string_view announce, int64_t piece_length, std::string_view pieces, std::string_view name,
+namespace torrent::dottorrent{
+  Metadata::Metadata(std::string_view announce, int64_t piece_length, std::string_view pieces, std::string_view name,
           int64_t length, std::array<std::byte, 20> info_hash, std::optional<std::vector<std::vector<std::string>>> announce_list=std::nullopt, std::optional<int64_t>  creation_date=std::nullopt, 
           std::optional<std::string_view> comment=std::nullopt, 
           std::optional<std::string_view> created_by=std::nullopt, std::optional<std::string_view> encoding=std::nullopt,
@@ -11,7 +11,7 @@ namespace metainfo{
           {
           };
 
-  Data fromDotTorrent(std::string& path){
+  Metadata fromDotTorrent(std::string& path){
     std::ifstream file{path, std::ios::binary};
     file.seekg(0, std::ios::end);
     std::streampos file_size{file.tellg()};
@@ -22,14 +22,14 @@ namespace metainfo{
     bencode::Decode decoder {file_data};
     bencode::Value decoded_dict {decoder.parseByteArray()};
 
-    std::map<std::string, bencode::Value> general_dict {std::get<std::map<std::string, bencode::Value>>(decoded_dict.value)};
-    std::map<std::string, bencode::Value> info_dict{std::get<std::map<std::string, bencode::Value>>(general_dict.at("info").value)}; 
+    const std::map<std::string, bencode::Value> general_dict {std::get<std::map<std::string, bencode::Value>>(decoded_dict.value)};
+    const std::map<std::string, bencode::Value> info_dict{std::get<std::map<std::string, bencode::Value>>(general_dict.at("info").value)}; 
     
     bencode::Encode encoder{};
-    std::vector<std::byte> info_dict_raw {encoder.encodeDict(info_dict)};
+    const std::vector<std::byte> info_dict_raw {encoder.encodeDict(info_dict)};
     
     try{
-      return Data{
+      return Metadata{
         getValue<std::string>(general_dict, "announce"), 
         getValue<int64_t>(info_dict, "piece length"), 
         getValue<std::string>(info_dict, "pieces"),

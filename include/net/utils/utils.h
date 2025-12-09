@@ -22,7 +22,7 @@ namespace net::utils{
     }
     return encoded_string;
   }
-  inline std::array<std::byte, 20> returnSHA1(std::vector<std::byte>& data){
+  inline std::array<std::byte, 20> returnSHA1(const std::vector<std::byte>& data){
 
     if (std::size(data) <= 0){
       throw std::invalid_argument("Invalid argument");

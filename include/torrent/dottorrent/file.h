@@ -8,7 +8,7 @@
 #include "bencode/Encode.h"
 #include "bencode/Value.h"
 
-namespace torrent{
+namespace torrent::dottorrent{
   struct Config{
     std::string file_path{};
     std::string dot_torrent_path{};

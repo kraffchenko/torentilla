@@ -20,10 +20,10 @@ std::array<std::byte, 20> Session::generateID(){
   return peer_id;
 }
 void Session::downloadTorrent(std::string& path){
-  metainfo::Data info {metainfo::fromDotTorrent(path)};
+  torrent::dottorrent::Metadata info {torrent::dottorrent::fromDotTorrent(path)};
 }
-void Session::createDotTorrent(torrent::Config config){
-  if (!torrent::createDotTorrent(config)){
+void Session::createDotTorrent(torrent::dottorrent::Config config){
+  if (!torrent::dottorrent::createDotTorrent(config)){
     std::cout << "Error while creating a .torrent." << '\n';
   }else{
     std::cout << ".torrent file was created.";

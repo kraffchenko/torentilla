@@ -1,5 +1,5 @@
-#ifndef DATA_H
-#define DATA_H
+#ifndef METADATA_H
+#define METADATA_H
 
 #include <iostream>
 #include <vector>
@@ -11,35 +11,35 @@
 #include "bencode/Value.h"
 #include "bencode/Decode.h"
 #include "bencode/Encode.h"
-#include "torrent/torrent.h"
+#include "torrent/dottorrent/file.h"
 #include <boost/compute/detail/sha1.hpp>  
 #include <openssl/evp.h>
 
-namespace metainfo{
-class Data {
+namespace torrent::dottorrent{
+class Metadata {
   public:
-    Data(std::string_view announce, int64_t piece_length, std::string_view pieces, std::string_view name,
+    Metadata(std::string_view announce, int64_t piece_length, std::string_view pieces, std::string_view name,
               int64_t length, std::array<std::byte, 20> info_hash, std::optional<std::vector<std::vector<std::string>>> announce_list, 
               std::optional<int64_t> creation_date, std::optional<std::string_view> comment, std::optional<std::string_view> created_by, 
               std::optional<std::string_view> encoding,
               std::optional<int> is_private, std::optional<std::string_view> md5sum
-         );
-    Data() = delete;
+            );
+    Metadata() = delete;
 
-    const std::string_view getAnnounce() const { return m_announce; };
-    const int64_t getPieceLength() const { return m_piece_length; };
-    const std::string_view getPieces() const { return m_pieces; };
-    const std::string_view getName() const { return m_name; };
-    const int64_t getLength() const { return m_length; };
+    std::string_view getAnnounce() const { return m_announce; };
+    int64_t getPieceLength() const { return m_piece_length; };
+    std::string_view getPieces() const { return m_pieces; };
+    std::string_view getName() const { return m_name; };
+    int64_t getLength() const { return m_length; };
     std::array<std::byte, 20> getInfoHash() const { return m_info_hash; }; 
 
-    const std::optional<std::string_view> getComment() const { return m_comment; };
-    const std::optional<std::string_view> getEncoding() const { return m_encoding; };
-    const std::optional<std::string_view> getCreatedBy() const { return m_created_by; };
-    const std::optional<std::vector<std::vector<std::string>>> getAnnounceList() const { return m_announce_list;};
-    const std::optional<int> getPrivateStatus() const { return m_is_private; };
-    const std::optional<std::string_view> getMd5sum() const { return m_md5sum; };
-    const std::optional<int64_t> getCreationDate() { return m_creation_date; }
+    std::optional<std::string_view> getComment() const { return m_comment; };
+    std::optional<std::string_view> getEncoding() const { return m_encoding; };
+    std::optional<std::string_view> getCreatedBy() const { return m_created_by; };
+    std::optional<std::vector<std::vector<std::string>>> getAnnounceList() const { return m_announce_list;};
+    std::optional<int> getPrivateStatus() const { return m_is_private; };
+    std::optional<std::string_view> getMd5sum() const { return m_md5sum; };
+    std::optional<int64_t> getCreationDate() { return m_creation_date; }
 
 
   private:
@@ -48,7 +48,7 @@ class Data {
     const int64_t m_piece_length{};
     const std::string m_pieces{};
     const int64_t m_length{};
-    std::array<std::byte, 20> m_info_hash{};
+    const std::array<std::byte, 20> m_info_hash{};
 
     const std::optional<std::vector<std::vector<std::string>>> m_announce_list{};
     const std::optional<int64_t> m_creation_date{};
@@ -58,10 +58,9 @@ class Data {
     const std::optional<int> m_is_private{};
     const std::optional<std::string> m_md5sum{};
   };
-Data fromDotTorrent(std::string& path);
+  Metadata fromDotTorrent(std::string& path);
   template<typename T>
   inline T getValue(const std::map<std::string, bencode::Value>& map_ref, const std::string& key){
-
     if(map_ref.count(key) == 0){
       throw std::invalid_argument("metainfo::getValue: Map does not contain a neccessary key");
     }else{

@@ -1,12 +1,12 @@
-#include "torrent/torrent.h"
+#include "torrent/dottorrent/file.h"
 namespace {  
-  void addHashedPieceString(std::string& pieces, std::ifstream& file_ref, int64_t byte_array_size){
+  void addHashedPieceString(std::string& pieces, std::ifstream& file_ref, const int64_t byte_array_size){
     std::vector<std::byte> raw_bytes(byte_array_size);
     file_ref.read(reinterpret_cast<char*>(raw_bytes.data()), byte_array_size);
     std::array<std::byte, 20> chunk_sha1{net::utils::returnSHA1(raw_bytes)};
     pieces.append(reinterpret_cast<const char*>(chunk_sha1.data()), chunk_sha1.size());
   } 
-  std::string createHashedPiecesString(std::ifstream& file_ref, int64_t piece_length){
+  std::string createHashedPiecesString(std::ifstream& file_ref, const int64_t piece_length){
     file_ref.seekg(0, std::ios::end);
     std::streampos file_size{file_ref.tellg()};
     file_ref.seekg(0, std::ios::beg);
@@ -26,13 +26,13 @@ namespace {
   }
 }
 
-namespace torrent{
+namespace torrent::dottorrent{
   std::expected<void, bool> createDotTorrent(Config config){
     std::ifstream file{config.file_path, std::ios::binary};
-    std::string pieces {createHashedPiecesString(file, config.piece_length)};
+    const std::string pieces {createHashedPiecesString(file, config.piece_length)};
     std::cout << pieces << '\n';
     file.seekg(0, std::ios::end);
-    std::streampos file_size{file.tellg()};
+    const std::streampos file_size{file.tellg()};
     file.seekg(0, std::ios::beg);
     std::ofstream dot_torrent{config.dot_torrent_path + config.name, std::ios::binary};
     bencode::Encode encode{};
@@ -48,10 +48,9 @@ namespace torrent{
       {"announce", bencode::Value{config.announce}},
       {"comment", bencode::Value{config.comment}},
     };
-    std::vector<std::byte> encoded_data{encode.encodeDict(general_dict)};
+    const std::vector<std::byte> encoded_data{encode.encodeDict(general_dict)};
     dot_torrent.write(reinterpret_cast<const char*>(encoded_data.data()), encoded_data.size());
     return {};
   }
 
 }
-
