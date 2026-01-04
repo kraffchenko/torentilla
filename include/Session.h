@@ -9,6 +9,10 @@
 #include "torrent/dottorrent/file.h"
 #include "torrent/dottorrent/Metadata.h"
 #include "net/utils/utils.h"
+#include "torrent/Peer.h"
+#include "torrent/Connection.h"
+#include "torrent/LocalPeer.h"
+#include "boost/asio.hpp"
 
 class Session{
 public:
@@ -16,6 +20,7 @@ public:
   void downloadTorrent(std::string& path);
   std::array<std::byte, 20> const getPeerID(){ return m_peer_id;};
   void createDotTorrent(torrent::dottorrent::Config config);
+  void setConnection();
 private:
   static std::array<std::byte, 20> generateID();
   std::array<std::byte, 20>m_peer_id {};

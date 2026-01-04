@@ -7,6 +7,7 @@
 #include <curl/curl.h>
 #include <boost/compute/detail/sha1.hpp>  
 #include <openssl/evp.h>
+#include <boost/asio.hpp>
 
 namespace net::utils{
   inline std::string url_encode(std::array<std::byte, 20> byte_array){
@@ -40,5 +41,9 @@ namespace net::utils{
 
     return info_hash;
   }
+  inline boost::asio::ip::tcp::endpoint createBoostEndpoint(std::string& ip, int port){
+    return boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(ip), static_cast<uint16_t>(port)};
+  }
+
 }
 #endif

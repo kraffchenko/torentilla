@@ -1,5 +1,7 @@
 #include "Session.h"
 
+namespace{
+}
 Session::Session()
 : m_peer_id{generateID()}
 {
@@ -21,6 +23,12 @@ std::array<std::byte, 20> Session::generateID(){
 }
 void Session::downloadTorrent(std::string& path){
   torrent::dottorrent::Metadata info {torrent::dottorrent::fromDotTorrent(path)};
+  boost::asio::io_context cntx{};
+  torrent::LocalPeer local_peer{cntx};
+  std::string ip {"192.168.122.253"};
+  torrent::Peer peer{ip, 6881, cntx};
+  local_peer.connect(peer);
+  cntx.run();
 }
 void Session::createDotTorrent(torrent::dottorrent::Config config){
   if (!torrent::dottorrent::createDotTorrent(config)){
@@ -29,3 +37,4 @@ void Session::createDotTorrent(torrent::dottorrent::Config config){
     std::cout << ".torrent file was created.";
   }
 }
+
