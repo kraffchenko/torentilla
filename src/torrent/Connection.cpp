@@ -53,7 +53,7 @@ namespace torrent{
                               torrent::dottorrent::Metadata& metadata,
                               const boost::system::error_code& error, 
                               size_t bytes_transferred){
-    if(!error){
+    if(!error && !m_is_closed){
       if(!m_handshake_sent){
         //sendHandshake(metadata.getInfoHash(), peer_id);
       }
@@ -65,25 +65,26 @@ namespace torrent{
                               torrent::dottorrent::Metadata& metadata,
                               const boost::system::error_code& error,
                               size_t bytes_transferred){
-    if(!error){
+    if(!error && !m_is_closed){
       if(!m_handshake_checked){
         checkHandshake(metadata, peer_id); 
       }else if(m_in_buffer.size() >= 4){
         int message_length {torrent::message::getIntFromBytes(&m_in_buffer[torrent::message::BytePos::LEN])};
-          if(std::size(m_in_buffer) > static_cast<size_t>(message_length)){
+        if(std::size(m_in_buffer) > static_cast<size_t>(message_length)){
           torrent::message::MessageID message_id {torrent::message::getMessageID(m_in_buffer)};
           torrent::message::Message message {torrent::message::createMessageFromBuffer(message_id, message_length, m_in_buffer)};
           size_t message_end {static_cast<size_t>(message_length) + torrent::message::BytePos::ID};
           m_in_buffer.erase(m_in_buffer.begin() + message_end);
         }
-      }else{
-          read(peer_id, metadata);
-      } 
-    }else{
-      std::cout << "Error while reading..." << '\n';
+      }
+      read(peer_id, metadata);
+    }else if(m_is_closed){
+      std::cout << "Connection was closed." << '\n';
+    }else {
+      std::cout << "Error while reading: " << error.what() << '\n';
     }
   }
-  bool Connection::checkHandshake(torrent::dottorrent::Metadata& metadata, std::array<std::byte, 20> peer_id){
+  void Connection::checkHandshake(torrent::dottorrent::Metadata& metadata, std::array<std::byte, 20> peer_id){
     if (std::size(m_in_buffer) >= 67){
       torrent::message::Handshake local_peer_handshake{.info_hash = metadata.getInfoHash(),
                                                        .peer_id = peer_id};
@@ -92,22 +93,38 @@ namespace torrent{
         m_handshake_is_valid = true; 
       }else{
         m_handshake_is_valid = false;
+        m_is_closed = true;
         m_socket.close();
       }
       m_handshake_checked = true;
     }
   };
-  void Connection::setProperties(torrent::message::Message message){
-    if(std::holds_alternative<torrent::message::StateMessage>(message)){
-      
-    }else if(std::holds_alternative<torrent::message::HaveMessage>(message)){
-      
-    }else if(std::holds_alternative<torrent::message::BitfieldMessage>(message)){
-        
-    }else if(std::holds_alternative<torrent::message::ActionMessage>(message)){
+  void Connection::handleMessage(torrent::message::StateMessage message){
+    if(message.msg_params.id == torrent::message::MessageID::choke){
     
-    }else if(std::holds_alternative<torrent::message::PieceMessage>(message)){
+    }else if(message.msg_params.id == torrent::message::MessageID::unchoke){
+
+    }else if(message.msg_params.id == torrent::message::MessageID::interested){
+      
+    }else if(message.msg_params.id == torrent::message::MessageID::not_interested){
       
     }
-  }
+  };
+  void Connection::handleMessage(torrent::message::HaveMessage message){
+    
+  };
+  void Connection::handleMessage(torrent::message::BitfieldMessage message){
+    
+  };
+  void Connection::handleMessage(torrent::message::ActionMessage message){
+    if(message.msg_params.id == torrent::message::MessageID::request){
+
+    }else if(message.msg_params.id == torrent::message::MessageID::cancel){
+
+    }
+  };
+  void Connection::handleMessage(torrent::message::PieceMessage message){
+    
+  };
+
 }
