@@ -3,6 +3,7 @@
 #include <iostream>
 #include <expected>
 #include <vector>
+#include <cmath>
 #include <fstream>
 #include "net/utils/utils.h"
 #include "bencode/Encode.h"

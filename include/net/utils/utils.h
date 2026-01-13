@@ -3,6 +3,7 @@
 #include <iostream>
 #include <array>
 #include <vector>
+#include <cmath>
 
 #include <curl/curl.h>
 #include <boost/compute/detail/sha1.hpp>  
@@ -10,6 +11,9 @@
 #include <boost/asio.hpp>
 
 namespace net::utils{
+ 
+
+
   inline std::string url_encode(std::array<std::byte, 20> byte_array){
     CURL* curl{curl_easy_init()};
     std::string encoded_string{};
@@ -43,7 +47,8 @@ namespace net::utils{
   }
   inline boost::asio::ip::tcp::endpoint createBoostEndpoint(std::string& ip, int port){
     return boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(ip), static_cast<uint16_t>(port)};
-  }
+  } 
+
 
 }
 #endif

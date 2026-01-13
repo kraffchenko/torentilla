@@ -49,8 +49,10 @@ namespace torrent::dottorrent{
       {"comment", bencode::Value{config.comment}},
     };
     const std::vector<std::byte> encoded_data{encode.encodeDict(general_dict)};
-    dot_torrent.write(reinterpret_cast<const char*>(encoded_data.data()), encoded_data.size());
+    dot_torrent.write(reinterpret_cast<const char*>(encoded_data.data()),
+                      encoded_data.size());
     return {};
   }
+
 
 }

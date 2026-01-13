@@ -58,7 +58,7 @@ class Metadata {
     const std::optional<int> m_is_private{};
     const std::optional<std::string> m_md5sum{};
   };
-  Metadata fromDotTorrent(std::string& path);
+  Metadata fromDotTorrent(const std::string_view path);
   template<typename T>
   inline T getValue(const std::map<std::string, bencode::Value>& map_ref, const std::string& key){
     if(map_ref.count(key) == 0){

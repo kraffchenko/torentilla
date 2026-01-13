@@ -10,11 +10,11 @@ class LocalPeer{
 private:
   bool m_am_choking{true};
   bool m_am_interested{false};
-  std::unordered_map<std::string, torrent::Peer> m_connections{};
+  std::unordered_map<std::string, torrent::Connection> m_connections{};
   boost::asio::ip::tcp::acceptor m_acceptor;
-  void handleInConnection(torrent::Connection connection_pointer,
+  void handleInConnection(torrent::Connection connection,
                         const boost::system::error_code& error);
-  void handleOutConnection(torrent::Peer& remote_peer, 
+  void handleOutConnection(torrent::Connection connection, 
                            const boost::system::error_code& err);
 public:
   LocalPeer(boost::asio::io_context& io_context);

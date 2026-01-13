@@ -17,7 +17,9 @@
 class Session{
 public:
   Session();
-  void downloadTorrent(std::string& path);
+  void downloadTorrent(const std::string_view dottorrent_path,
+                       const std::string_view path_to_install,
+                       const std::string_view filename_to_install);
   std::array<std::byte, 20> const getPeerID(){ return m_peer_id;};
   void createDotTorrent(torrent::dottorrent::Config config);
   void setConnection();

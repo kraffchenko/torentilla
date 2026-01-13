@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <vector>
 #include <boost/asio.hpp>
-namespace torrent::message{
-  enum class MessageID{
+namespace torrent::protocol::message{
+  enum class ID{
     choke,
     unchoke,
     interested,
@@ -29,9 +29,16 @@ namespace torrent::message{
     static constexpr size_t REQUESTED_LENGTH{13};
     static constexpr size_t BLOCK{13};
   };
-  struct MessageParams{
+  namespace length{
+    static constexpr int32_t STATE{1};
+    static constexpr int32_t HAVE{5};
+    static constexpr int32_t REQUEST{13};
+    static constexpr int32_t PIECE{9};
+    static constexpr int32_t CANCEL{13};
+  }
+  struct Params{
     int32_t message_len{};
-    MessageID id{};
+    ID id{};
   };
   struct Handshake{
     std::byte pstrlen{static_cast<std::byte>(19)};
@@ -47,28 +54,28 @@ namespace torrent::message{
               info_hash == handshake.info_hash;
     }
   };
-  struct KeepAliveMessage{
+  struct KeepAlive{
     int32_t len{};
   };
-  struct StateMessage{
-    MessageParams msg_params{};
+  struct State{
+    Params msg_params{};
   };
-  struct HaveMessage{
-    MessageParams msg_params{};
+  struct Have{
+    Params msg_params{};
     int piece_index{};
   };
-  struct BitfieldMessage{
-    MessageParams msg_params{};
+  struct Bitfield{
+    Params msg_params{};
     std::vector<std::byte> bitfield{};
   };
-  struct ActionMessage{
-    MessageParams msg_params{};
+  struct Action{
+    Params msg_params{};
     int index{};
     int begin{};
     int requested_length{};
   };
-  struct PieceMessage{
-    MessageParams msg_params{};
+  struct Piece{
+    Params msg_params{};
     int index{};
     int begin{};
     std::vector<std::byte> block{};
@@ -88,14 +95,14 @@ namespace torrent::message{
       return Handshake{pstrlen, pstr, reserved, info_hash, peer_id};
   };
 
-  using Message = std::variant<torrent::message::StateMessage,
-                              torrent::message::HaveMessage,
-                              torrent::message::BitfieldMessage,
-                              torrent::message::ActionMessage,
-                              torrent::message::PieceMessage>;
+  using Message = std::variant<State,
+                              Have,
+                              Bitfield,
+                              Action,
+                              Piece>;
 
-  inline MessageID getMessageID(std::vector<std::byte>& buffer){
-    return static_cast<MessageID>(buffer.at(BytePos::ID));
+  inline ID getMessageID(std::vector<std::byte>& buffer){
+    return static_cast<ID>(buffer.at(BytePos::ID));
   };
   template<typename T>
   inline int getIntFromBytes(T iterator){
@@ -110,27 +117,27 @@ namespace torrent::message{
     std::copy(iterator, iterator+message_length, bytes_array.data());  
     return bytes_array;
   };
-  inline Message createMessageFromBuffer(MessageID message_id, int message_length, std::vector<std::byte>& buffer){
+  inline Message createMessageFromBuffer(ID message_id, int message_length, std::vector<std::byte>& buffer){
     switch(message_id){
-      case MessageID::choke:
-      case MessageID::unchoke:
-      case MessageID::interested:
-      case MessageID::not_interested:
-        return StateMessage{MessageParams{message_length, message_id}};
-      case MessageID::have:
-        return HaveMessage{MessageParams{message_length, message_id}, 
+      case ID::choke:
+      case ID::unchoke:
+      case ID::interested:
+      case ID::not_interested:
+        return State{Params{message_length, message_id}};
+      case ID::have:
+        return Have{Params{message_length, message_id}, 
                           getIntFromBytes(&buffer[BytePos::INDEX])};
-      case MessageID::bitfield:
-        return BitfieldMessage{MessageParams{message_length, message_id}, 
+      case ID::bitfield:
+        return Bitfield{Params{message_length, message_id}, 
                               getBytesInRange(&buffer[BytePos::BITFIELD], message_length)};
-      case MessageID::request:
-      case MessageID::cancel:
-        return ActionMessage{MessageParams{message_length, message_id}, 
+      case ID::request:
+      case ID::cancel:
+        return Action{Params{message_length, message_id}, 
                             getIntFromBytes(&buffer[BytePos::INDEX]),
                             getIntFromBytes(&buffer[BytePos::BEGIN]),
                             getIntFromBytes(&buffer[BytePos::REQUESTED_LENGTH])};
-      case MessageID::piece:
-        return PieceMessage{MessageParams{message_length, message_id},
+      case ID::piece:
+        return Piece{Params{message_length, message_id},
                             getIntFromBytes(&buffer[BytePos::INDEX]),
                             getIntFromBytes(&buffer[BytePos::BEGIN]),
                             getBytesInRange(&buffer[BytePos::BLOCK], message_length)};
