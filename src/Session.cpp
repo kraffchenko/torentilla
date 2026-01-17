@@ -31,7 +31,7 @@ void Session::downloadTorrent(const std::string_view dottorrent_path,
                       static_cast<size_t>(metadata.getPieceLength())}; 
   torrent::File download_file{path_to_install, filename_to_install, resume_file, metadata};
   torrent::LocalPeer local_peer{cntx};
-  local_peer.acceptConnection();
+  local_peer.acceptConnection(download_file, m_peer_id);
   cntx.run();
 }
 void Session::createDotTorrent(torrent::dottorrent::Config config){

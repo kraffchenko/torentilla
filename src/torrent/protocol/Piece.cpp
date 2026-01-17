@@ -13,4 +13,8 @@ namespace torrent::protocol{
   int32_t Piece::getCurrentOffset(){
     return m_current_offset;
   };
+  std::pair<std::array<std::byte, Piece::PIECE_LENGTH_B>::iterator,
+            std::array<std::byte, Piece::PIECE_LENGTH_B>::iterator> Piece::getBlock(){
+    return {m_begin, m_begin + m_current_offset};
+  }; 
 }

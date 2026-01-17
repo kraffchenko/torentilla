@@ -15,7 +15,7 @@
 using namespace torrent::protocol;
 
 
-namespace torrent{
+namespace net{
   class Connection{
   private:
     inline static std::map<int32_t, Piece> pending_piece{};

@@ -1,6 +1,6 @@
-#include "torrent/Connection.h"
+#include "net/Connection.h"
 
-namespace torrent{
+namespace net{
    //void Connection::sendHandshake(std::array<std::byte, 20> info_hash, std::array<std::byte, 20> peer_id){
    //m_out_buffer.clear();
 

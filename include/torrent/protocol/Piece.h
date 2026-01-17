@@ -10,7 +10,6 @@ namespace torrent::protocol{
     static constexpr int32_t BLOCK_LENGTH_B{16384};
     int32_t getIndex();
     int32_t getCurrentOffset();
-    std::array<std::byte, PIECE_LENGTH_B>& getByteArray();
     void setOffset(int32_t offset);
     void moveToByteArray(std::vector<std::byte>::const_iterator start,
                          std::vector<std::byte>::const_iterator end);
@@ -21,6 +20,7 @@ namespace torrent::protocol{
     int32_t m_index{};
     int32_t m_current_offset{};
     std::array<std::byte, PIECE_LENGTH_B> m_piece{};  
+    std::array<std::byte, PIECE_LENGTH_B>::iterator m_begin {m_piece.begin()};
   };
 };
 #endif

@@ -4,26 +4,28 @@ namespace torrent{
   : m_acceptor{io_context}
   {
   } 
-  void LocalPeer::connect(torrent::Peer& remote_peer){
+  void LocalPeer::connect(torrent::Peer& remote_peer, torrent::File& file, std::array<std::byte, 20>& peer_id){
     std::cout << "Trying to connect to " << remote_peer.getIp() << "..." << '\n';
-    torrent::Connection connection {torrent::Connection{m_acceptor.get_executor()}};
+    net::Connection connection {net::Connection{m_acceptor.get_executor()}};
     connection.getSocket().async_connect(
                             remote_peer.getEndpoint(),
-                            [this, conn = std::move(connection)](const boost::system::error_code& error) mutable {
-      handleOutConnection(std::move(conn), error);
+                            [this, conn = std::move(connection), &peer_id, &file](const boost::system::error_code& error) mutable {
+      handleOutConnection(std::move(conn), peer_id, file, error);
     });
   };
-  void LocalPeer::acceptConnection(){
+  void LocalPeer::acceptConnection(torrent::File& file, std::array<std::byte, 20>& peer_id){
     std::cout << "Accepting connections..." << '\n';
-    torrent::Connection connection {torrent::Connection{m_acceptor.get_executor()}}; // 
+    net::Connection connection {net::Connection{m_acceptor.get_executor()}}; // 
     m_acceptor.async_accept(connection.getSocket(), 
-                            [this, conn = std::move(connection)](const boost::system::error_code& error) mutable {
-      handleInConnection(std::move(conn), error);
+                            [this, conn = std::move(connection), &file, &peer_id](const boost::system::error_code& error) mutable {
+      handleInConnection(std::move(conn), peer_id, file, error);
     }
       ); // fills the empty Connection object (the created empty socket) with incoming connection, calls a handler function which is esentially a separate function that just does extra stuff and recursively calls acceptConnection to accept new connections.
   };
-  void LocalPeer::handleInConnection(torrent::Connection connection, 
-                                   const boost::system::error_code& error){
+  void LocalPeer::handleInConnection(net::Connection connection,
+                                     std::array<std::byte, 20>& peer_id,
+                                     torrent::File& file,
+                                     const boost::system::error_code& error){
     if(!error){
       boost::asio::ip::tcp::socket& connection_socket {connection.getSocket()};
       boost::asio::ip::tcp::endpoint remote_endpoint{connection_socket.remote_endpoint()};
@@ -34,13 +36,15 @@ namespace torrent{
         connection_socket.close(); 
       }else{
         m_connections.insert({remote_ip, std::move(connection)});
+        m_tcp_reader.read(connection, peer_id, file);
         std::cout << "Connection request from " << remote_ip << " was accepted." << '\n';
         std::cout << "Connection successfully established.";
       }
     }
-    acceptConnection();
+    acceptConnection(file, peer_id);
   };
-  void LocalPeer::handleOutConnection(torrent::Connection connection, const boost::system::error_code& err){
+  void LocalPeer::handleOutConnection(net::Connection connection, std::array<std::byte, 20>& peer_id, 
+                                      torrent::File& file, const boost::system::error_code& err){
     if(!err){
       boost::asio::ip::tcp::endpoint remote_endpoint{connection
                                                      .getSocket()
@@ -53,6 +57,7 @@ namespace torrent{
       }else{
         std::cout << "Successfully connected to " << remote_ip << "." << '\n';
         m_connections.insert({remote_ip, std::move(connection)});
+        m_tcp_reader.read(connection, peer_id, file);
       }
     }else{
       std::cout << err.what() << '\n';

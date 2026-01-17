@@ -3,7 +3,7 @@
 #include <iostream>
 #include "boost/asio.hpp"
 #include "net/utils/utils.h"
-#include "torrent/Connection.h"
+#include "net/Connection.h"
 namespace torrent{
 class Peer{
 private:

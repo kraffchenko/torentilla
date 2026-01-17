@@ -10,7 +10,7 @@
 #include "torrent/dottorrent/Metadata.h"
 #include "net/utils/utils.h"
 #include "torrent/Peer.h"
-#include "torrent/Connection.h"
+#include "net/Connection.h"
 #include "torrent/LocalPeer.h"
 #include "boost/asio.hpp"
 
