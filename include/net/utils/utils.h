@@ -49,6 +49,5 @@ namespace net::utils{
     return boost::asio::ip::tcp::endpoint{boost::asio::ip::make_address(ip), static_cast<uint16_t>(port)};
   } 
 
-
 }
 #endif

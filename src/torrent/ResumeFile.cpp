@@ -8,6 +8,16 @@ namespace torrent{
   {
     writeFile(info_hash_string, m_default_suffix);
   }
+  ResumeFile::ResumeFile(std::string_view info_hash_string, std::string_view file_name, 
+               std::string_view file_path, int64_t downloaded,
+               int64_t uploaded, int64_t left, Bitfield& bitfield)
+  : m_file_name{info_hash_string}, m_root_file_name{file_name}, m_root_file_path{file_path}, m_downloaded{downloaded}, 
+    m_uploaded{uploaded}, m_left{left}, m_bitfield{bitfield}  
+  {
+  };
+  Bitfield& ResumeFile::getBitfield(){
+    return m_bitfield;
+  }
   void ResumeFile::writeFile(const std::string_view file_name, const std::string_view suffix){
     std::cout << "Starting to write resume file...";
     bencode::Encode encoder{};
@@ -27,6 +37,7 @@ namespace torrent{
                               std::string{file_name} + 
                               std::string{suffix}, 
                               std::ios::binary};
+    std::cout << m_file_path.string() + std::string{file_name} + std::string{suffix} << '\n';
     resume_file.write(reinterpret_cast<const char*>(encoded_data.data()), encoded_data.size());
   }
   ResumeFile ResumeFile::fromFile(const std::string_view file_path, const std::string_view file_name){
@@ -49,7 +60,7 @@ namespace torrent{
     int64_t uploaded{std::get<int64_t>(resume_map.at("uploaded").value)};
     int64_t left{std::get<int64_t>(resume_map.at("left").value)};
     Bitfield bitfield {Bitfield::fromString(std::get<std::string>(resume_map.at("bitfield").value),
-                            static_cast<size_t>(std::get<int64_t>(resume_map.at("pieces amount").value)))};
+                        static_cast<size_t>(std::get<int64_t>(resume_map.at("pieces amount").value)))};
     return ResumeFile{info_hash, res_file_name, res_file_path, downloaded, uploaded, left, bitfield};
   }
 }

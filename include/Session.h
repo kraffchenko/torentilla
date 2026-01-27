@@ -13,6 +13,7 @@
 #include "net/Connection.h"
 #include "torrent/LocalPeer.h"
 #include "boost/asio.hpp"
+#include "net/CommunicationManager.h"
 
 class Session{
 public:

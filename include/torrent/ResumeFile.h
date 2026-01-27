@@ -22,22 +22,22 @@ namespace torrent{
     int64_t getUploaded();
     int64_t getDownloaded();
     int64_t getLeft();
-    Bitfield getBitfield();
+    Bitfield& getBitfield();
     void setUploaded(const int64_t bytes);
     void setDownloaded(const int64_t bytes);
     void setLeft(const int64_t bytes);
     ResumeFile(std::string_view info_hash_string, std::string_view file_name, std::string_view file_path, size_t file_size, size_t piece_amnt);
     static ResumeFile fromFile(const std::string_view file_path, const std::string_view file_name);
+    void writeFile(const std::string_view file_name, const std::string_view suffix);
   private:
     ResumeFile(std::string_view info_hash_string, std::string_view file_name, 
                std::string_view file_path, int64_t downloaded,
                int64_t uploaded, int64_t left, Bitfield& bitfield);
-    void writeFile(const std::string_view file_name, const std::string_view suffix);
     std::filesystem::path home_dir {std::getenv("HOME")};
     std::filesystem::path m_file_path{home_dir 
                                       / ".config"
                                       / "torrentilla"
-                                      / "resume"};
+                                      / "resume/"};
     std::string m_file_name{};
     std::string m_root_file_path{};
     std::string m_root_file_name{};

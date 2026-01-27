@@ -11,8 +11,8 @@ namespace torrent::dottorrent{
           {
           };
 
-  Metadata fromDotTorrent(std::string& path){
-    std::ifstream file{path, std::ios::binary};
+  Metadata fromDotTorrent(std::string_view path){
+    std::ifstream file{std::string{path}, std::ios::binary};
     file.seekg(0, std::ios::end);
     std::streampos file_size{file.tellg()};
     file.seekg(0, std::ios::beg);

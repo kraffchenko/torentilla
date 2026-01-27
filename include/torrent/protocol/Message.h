@@ -3,7 +3,9 @@
 #include <cstdint>
 #include <vector>
 #include <boost/asio.hpp>
+#include "torrent/protocol/Bitfield.h"
 namespace torrent::protocol::message{
+
   enum class ID{
     choke,
     unchoke,
@@ -35,72 +37,7 @@ namespace torrent::protocol::message{
     static constexpr int32_t REQUEST{13};
     static constexpr int32_t PIECE{9};
     static constexpr int32_t CANCEL{13};
-  }
-  struct Params{
-    int32_t message_len{};
-    ID id{};
   };
-  struct Handshake{
-    std::byte pstrlen{static_cast<std::byte>(19)};
-    std::string pstr{"BitTorrent protocol"};
-    std::array<std::byte, 8> reserved{};
-    std::array<std::byte, 20> info_hash{};
-    std::array<std::byte, 20> peer_id{};
-    
-    bool operator == (const Handshake& handshake) const{
-       return pstrlen == handshake.pstrlen &&
-              pstr == handshake.pstr && 
-              reserved == handshake.reserved &&
-              info_hash == handshake.info_hash;
-    }
-  };
-  struct KeepAlive{
-    int32_t len{};
-  };
-  struct State{
-    Params msg_params{};
-  };
-  struct Have{
-    Params msg_params{};
-    int piece_index{};
-  };
-  struct Bitfield{
-    Params msg_params{};
-    std::vector<std::byte> bitfield{};
-  };
-  struct Action{
-    Params msg_params{};
-    int index{};
-    int begin{};
-    int requested_length{};
-  };
-  struct Piece{
-    Params msg_params{};
-    int index{};
-    int begin{};
-    std::vector<std::byte> block{};
-  };
-  
-  inline Handshake createHandshakeFromBuffer(std::vector<std::byte>& buffer){
-      std::byte pstrlen {buffer[BytePos::PSTRLEN]};
-      std::string pstr {};
-      std::transform(&buffer[BytePos::PSTR], &buffer[BytePos::PSTR] + 19, 
-                        pstr.begin(), [](std::byte bt) {return static_cast<char>(bt); });
-      std::array<std::byte, 8> reserved{};
-      std::copy(&buffer[BytePos::RESERVED], &buffer[BytePos::RESERVED] + 8, reserved.begin());
-      std::array<std::byte, 20> info_hash{}; 
-      std::copy(&buffer[BytePos::INFO_HASH], &buffer[BytePos::INFO_HASH] + 20 , info_hash.begin());
-      std::array<std::byte, 20> peer_id {};
-      std::copy(&buffer[BytePos::PEER_ID], &buffer[BytePos::PEER_ID] + 20, peer_id.begin());
-      return Handshake{pstrlen, pstr, reserved, info_hash, peer_id};
-  };
-
-  using Message = std::variant<State,
-                              Have,
-                              Bitfield,
-                              Action,
-                              Piece>;
-
   inline ID getMessageID(std::vector<std::byte>& buffer){
     return static_cast<ID>(buffer.at(BytePos::ID));
   };
@@ -117,6 +54,132 @@ namespace torrent::protocol::message{
     std::copy(iterator, iterator+message_length, bytes_array.data());  
     return bytes_array;
   };
+  inline std::array<std::byte, 4> getByteArrayFromInt(uint32_t num){
+    std::array<std::byte, 4> byte_array{};
+    uint32_t number{htonl(num)};
+    std::memcpy(byte_array.data(), &number, 4);
+    return byte_array;
+  };
+  struct Params{
+    int32_t message_len{};
+    ID id{};
+  };
+  struct Handshake{
+    std::byte pstrlen{static_cast<std::byte>(19)};
+    std::string pstr{"BitTorrent protocol"};
+    std::array<std::byte, 8> reserved{};
+    std::array<std::byte, 20> info_hash{};
+    std::array<std::byte, 20> peer_id{};
+    
+    bool operator == (const Handshake& handshake) const{
+       return pstrlen == handshake.pstrlen &&
+              pstr == handshake.pstr && 
+              reserved == handshake.reserved &&
+              info_hash == handshake.info_hash; 
+    };
+    std::vector<std::byte> inByteArray(){
+      std::vector<std::byte> byte_array{};
+      byte_array.push_back(pstrlen);
+      auto it_pstr {std::transform(pstr.begin(), pstr.end(), &byte_array.back(), [](char ch){ return static_cast<std::byte>(ch); })};
+      auto it_reserved {std::copy(reserved.begin(), reserved.end(), it_pstr)};
+      auto it_info{std::copy(info_hash.begin(), info_hash.end(), it_reserved)};
+      std::copy(peer_id.begin(), peer_id.end(), it_info); 
+      return byte_array;
+    };
+  };
+  struct KeepAlive{
+    int32_t len{};
+  };
+  struct State{
+    Params msg_params{};
+    std::vector<std::byte> inByteArray(){
+      std::vector<std::byte> byte_array{};
+      std::array<std::byte, 4> message_len{getByteArrayFromInt(msg_params.message_len)};
+      byte_array.insert(byte_array.end(), message_len.begin(), message_len.end());
+      byte_array.push_back(static_cast<std::byte>(msg_params.id));
+      return byte_array;
+    };
+  };
+  struct Have{
+    Params msg_params{};
+    int piece_index{};
+    std::vector<std::byte> inByteArray(){
+      std::vector<std::byte> byte_array{};
+      std::array<std::byte, 4> message_len{getByteArrayFromInt(msg_params.message_len)};
+      byte_array.insert(byte_array.end(), message_len.begin(), message_len.end());
+      byte_array.push_back(static_cast<std::byte>(msg_params.id));
+      std::array<std::byte, 4> index{getByteArrayFromInt(piece_index)};
+      byte_array.insert(byte_array.end(),index.begin(), index.end());
+      return byte_array;
+    };
+  };
+  struct Bitfield{
+    Params msg_params{};
+    std::vector<std::byte>bitfield_as_byte_array{};
+    std::vector<std::byte> inByteArray(){
+      std::vector<std::byte> byte_array{};
+      std::array<std::byte, 4> message_len{getByteArrayFromInt(msg_params.message_len)};
+      byte_array.insert(byte_array.end(), message_len.begin(), message_len.end());
+      byte_array.push_back(static_cast<std::byte>(msg_params.id));
+      byte_array.insert(byte_array.end(), bitfield_as_byte_array.begin(), bitfield_as_byte_array.end());
+      return byte_array;
+    };
+  };
+  struct Action{
+    Params msg_params{};
+    int index{};
+    int begin{};
+    int requested_length{};
+    std::vector<std::byte> inByteArray(){
+      std::vector<std::byte> byte_array{};
+      std::array<std::byte, 4> message_len{getByteArrayFromInt(msg_params.message_len)};
+      byte_array.insert(byte_array.end(), message_len.begin(), message_len.end());
+      byte_array.push_back(static_cast<std::byte>(msg_params.id));
+      std::array<std::byte, 4> l_index{getByteArrayFromInt(index)};
+      byte_array.insert(byte_array.end(), l_index.begin(), l_index.end());
+      std::array<std::byte, 4> l_begin{getByteArrayFromInt(begin)};
+      byte_array.insert(byte_array.end(), l_begin.begin(), l_begin.end());
+      std::array<std::byte, 4> l_requested_length{getByteArrayFromInt(requested_length)};
+      byte_array.insert(byte_array.end(), l_requested_length.begin(), l_requested_length.end());
+      return byte_array;
+    };
+  };
+  struct Piece{
+    Params msg_params{};
+    int index{};
+    int begin{};
+    std::vector<std::byte> block{};
+    std::vector<std::byte> inByteArray(){
+      std::vector<std::byte> byte_array{};
+      std::array<std::byte, 4> message_len{getByteArrayFromInt(msg_params.message_len)};
+      byte_array.insert(byte_array.end(), message_len.begin(), message_len.end());
+      byte_array.push_back(static_cast<std::byte>(msg_params.id));
+      std::array<std::byte, 4> l_index{getByteArrayFromInt(index)};
+      byte_array.insert(byte_array.end(), l_index.begin(), l_index.end());
+      std::array<std::byte, 4> l_begin{getByteArrayFromInt(begin)};
+      byte_array.insert(byte_array.end(), l_begin.begin(), l_begin.end());
+      byte_array.insert(byte_array.end(), block.begin(), block.end());
+      return byte_array;
+    };
+  };
+  inline Handshake createHandshakeFromBuffer(std::vector<std::byte>& buffer){
+      std::byte pstrlen {buffer[BytePos::PSTRLEN]};
+      std::string pstr {};
+      std::transform(&buffer[BytePos::PSTR], &buffer[BytePos::PSTR] + 19, 
+                        pstr.begin(), [](std::byte bt) {return static_cast<char>(bt); });
+      std::array<std::byte, 8> reserved{};
+      std::copy(&buffer[BytePos::RESERVED], &buffer[BytePos::RESERVED] + 8, reserved.begin());
+      std::array<std::byte, 20> info_hash{}; 
+      std::copy(&buffer[BytePos::INFO_HASH], &buffer[BytePos::INFO_HASH] + 20 , info_hash.begin());
+      std::array<std::byte, 20> peer_id {};
+      std::copy(&buffer[BytePos::PEER_ID], &buffer[BytePos::PEER_ID] + 20, peer_id.begin());
+      return Handshake{pstrlen, pstr, reserved, info_hash, peer_id};
+  };
+  using Message = std::variant<State,
+                              Have,
+                              Bitfield,
+                              Action,
+                              Piece>;
   inline Message createMessageFromBuffer(ID message_id, int message_length, std::vector<std::byte>& buffer){
     switch(message_id){
       case ID::choke:
@@ -143,7 +206,7 @@ namespace torrent::protocol::message{
                             getBytesInRange(&buffer[BytePos::BLOCK], message_length)};
     };
   };
-}
+};
 
 #endif
 

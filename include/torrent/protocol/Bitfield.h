@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <algorithm>
+#include <bitset>
 
 namespace torrent::protocol{
   class Bitfield{
@@ -15,9 +17,11 @@ namespace torrent::protocol{
     std::pair<size_t, size_t> getBlockAndBitIndex(int piece_index);
     Bitfield(size_t pieces_amnt) : m_pieces_amnt{pieces_amnt}, m_bitfield((pieces_amnt + 8 - 1) / 8){};
   private:
-    Bitfield(std::vector<std::byte>& bitfield, const size_t piece_amnt);
+    Bitfield(std::vector<std::byte>& bitfield, const size_t piece_amnt) : m_bitfield{bitfield}, m_pieces_amnt{piece_amnt}{};
     size_t m_pieces_amnt{};
     std::vector<std::byte> m_bitfield{};
   };
+  std::vector<size_t> getMissingPieces(std::vector<std::byte>& local_bitfield_array, 
+                                       std::vector<std::byte>& remote_bitfield_array);
 }
 #endif
