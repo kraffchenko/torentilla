@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <vector>
 #include <boost/asio.hpp>
+#include "torrent/protocol/Buffer.h"
 namespace torrent::protocol::message{
 
   enum class ID{
@@ -37,21 +38,20 @@ namespace torrent::protocol::message{
     static constexpr int32_t PIECE{9};
     static constexpr int32_t CANCEL{13};
   };
-  inline ID getMessageID(std::vector<std::byte>& buffer){
-    return static_cast<ID>(buffer.at(BytePos::ID));
+  inline ID getMessageID(torrent::protocol::Buffer& buffer){
+    return static_cast<ID>(buffer[BytePos::ID]);
   };
-  template<typename T>
+  template <typename T>
   inline int getIntFromBytes(T iterator){
     uint32_t num{};
     std::memcpy(&num, iterator, 4);
     num = ntohl(num);
     return static_cast<int>(num);
   };
-  template<typename T>
-  inline std::vector<std::byte> getBytesInRange(T iterator, size_t message_length){
+  inline std::vector<std::byte> getBytesInRange(std::span<std::byte> range){
     std::vector<std::byte> bytes_array{};
-    bytes_array.reserve(message_length);
-    std::copy(iterator, iterator+message_length, std::back_inserter(bytes_array));  
+    bytes_array.reserve(range.size());
+    bytes_array.assign_range(range);
     return bytes_array;
   };
   inline std::array<std::byte, 4> getByteArrayFromInt(uint32_t num){
@@ -161,18 +161,18 @@ namespace torrent::protocol::message{
       return byte_array;
     };
   };
-  inline Handshake createHandshakeFromBuffer(std::vector<std::byte>& buffer){
-      std::byte pstrlen {buffer[BytePos::PSTRLEN]};
+  inline Handshake createHandshakeFromBuffer(torrent::protocol::Buffer& buffer_ref){
+      std::byte pstrlen {buffer_ref[BytePos::PSTRLEN]};
       std::string pstr {};
       pstr.resize(19);
-      std::transform(&buffer[BytePos::PSTR], &buffer[BytePos::PSTR] + 19, 
+      std::transform(&buffer_ref[BytePos::PSTR], &buffer_ref[BytePos::PSTR] + 19, 
                         pstr.begin(), [](std::byte bt) {return static_cast<char>(bt); });
       std::array<std::byte, 8> reserved{};
-      std::copy(&buffer[BytePos::RESERVED], &buffer[BytePos::RESERVED] + 8, reserved.begin());
+      std::copy(&buffer_ref[BytePos::RESERVED], &buffer_ref[BytePos::RESERVED] + 8, reserved.begin());
       std::array<std::byte, 20> info_hash{};
-      std::copy(&buffer[BytePos::INFO_HASH], &buffer[BytePos::INFO_HASH] + 20 , info_hash.begin());
+      std::copy(&buffer_ref[BytePos::INFO_HASH], &buffer_ref[BytePos::INFO_HASH] + 20 , info_hash.begin());
       std::array<std::byte, 20> peer_id {};
-      std::copy(&buffer[BytePos::PEER_ID], &buffer[BytePos::PEER_ID] + 20, peer_id.begin());
+      std::copy(&buffer_ref[BytePos::PEER_ID], &buffer_ref[BytePos::PEER_ID] + 20, peer_id.begin());
       return Handshake{pstrlen, pstr, reserved, info_hash, peer_id};
   };
   using Message = std::variant<State,
@@ -180,7 +180,7 @@ namespace torrent::protocol::message{
                               Bitfield,
                               Action,
                               Piece>;
-  inline Message createMessageFromBuffer(ID message_id, int message_length, std::byte* buffer){
+  inline Message createMessageFromBuffer(ID message_id, int message_length, torrent::protocol::Buffer& buffer_ref){
     switch(message_id){
       case ID::choke:
       case ID::unchoke:
@@ -189,21 +189,21 @@ namespace torrent::protocol::message{
         return State{Params{message_length, message_id}};
       case ID::have:
         return Have{Params{message_length, message_id}, 
-                          getIntFromBytes(&buffer[BytePos::INDEX])};
+                          getIntFromBytes(&buffer_ref[BytePos::INDEX])};
       case ID::bitfield:
         return Bitfield{Params{message_length, message_id}, 
-                               getBytesInRange(&buffer[BytePos::BITFIELD], message_length)};
+                               getBytesInRange(buffer_ref.getRange(BytePos::BITFIELD, message_length))};
       case ID::request:
       case ID::cancel:
         return Action{Params{message_length, message_id}, 
-                            getIntFromBytes(&buffer[BytePos::INDEX]),
-                            getIntFromBytes(&buffer[BytePos::BEGIN]),
-                            getIntFromBytes(&buffer[BytePos::REQUESTED_LENGTH])};
+                            getIntFromBytes(&buffer_ref[BytePos::INDEX]),
+                            getIntFromBytes(&buffer_ref[BytePos::BEGIN]),
+                            getIntFromBytes(&buffer_ref[BytePos::REQUESTED_LENGTH])};
       case ID::piece:
         return Piece{Params{message_length, message_id},
-                            getIntFromBytes(&buffer[BytePos::INDEX]),
-                            getIntFromBytes(&buffer[BytePos::BEGIN]),
-                            getBytesInRange(&buffer[BytePos::BLOCK], message_length)};
+                            getIntFromBytes(&buffer_ref[BytePos::INDEX]),
+                            getIntFromBytes(&buffer_ref[BytePos::BEGIN]),
+                            getBytesInRange(buffer_ref.getRange(BytePos::BLOCK, message_length))};
       default:
         throw std::runtime_error("Unknown message ID in createMessageFromBuffer");
     };

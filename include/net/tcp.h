@@ -143,11 +143,10 @@ namespace{
         net::tcp::checkHandshake(connection, com_manager); 
       }else if(connection.m_in_buffer.size() >= 4){
         int message_length {message::getIntFromBytes(&connection.m_in_buffer[message::BytePos::LEN])};
-        if(std::size(connection.m_in_buffer) > static_cast<size_t>(message_length)){
+        if(connection.m_in_buffer.size() >= static_cast<size_t>(message_length)){
           message::ID message_id {message::getMessageID(connection.m_in_buffer)};
           std::visit([&connection, &com_manager](auto&& message) { handleMessage(connection, message, com_manager); }, 
-                     message::createMessageFromBuffer(message_id, message_length-1, connection.m_in_buffer.data()));
-          size_t message_end {static_cast<size_t>(message_length) + static_cast<size_t>(message::BytePos::ID)};
+                     message::createMessageFromBuffer(message_id, message_length-1, connection.m_in_buffer));
           std::cout << static_cast<size_t>(message_length) << '\n'; 
         }
       }
@@ -169,7 +168,7 @@ namespace net::tcp{
                    net::CommunicationManager& com_manager) {
     //std::cout << "reading..." << '\n'; 
 
-    connection.getSocket().async_read_some(buffer(connection.m_in_buffer),
+    connection.getSocket().async_read_some(buffer(connection.m_in_buffer.getRange()),
                                            std::bind(handleRead,
                                            std::ref(connection),
                                            std::ref(com_manager),
@@ -179,7 +178,7 @@ namespace net::tcp{
   inline void write(net::Connection& connection,
                     net::CommunicationManager& com_manager){
     async_write(connection.getSocket(), 
-                buffer(connection.m_out_buffer),
+                buffer(connection.m_out_buffer.getRange()),
                 std::bind(handleWrite,
                           std::ref(connection),
                           std::ref(com_manager),
@@ -188,7 +187,7 @@ namespace net::tcp{
   };
   inline void checkHandshake(net::Connection& connection,
                              net::CommunicationManager& com_manager){
-    if(std::size(connection.m_in_buffer) >= 67){
+    if(connection.m_in_buffer.size() >= 67){
       message::Handshake local_peer_handshake{.info_hash = com_manager.getFile().m_metadata.getInfoHash(),
                                               .peer_id = com_manager.getPeerId()};
       message::Handshake remote_peer_handshake{message::createHandshakeFromBuffer(connection.m_in_buffer)};
@@ -202,7 +201,6 @@ namespace net::tcp{
         connection.getSocket().close();
       }
       connection.m_handshake_checked = true;
-      connection.m_in_buffer.erase(connection.m_in_buffer.begin(), connection.m_in_buffer.begin()+68);
     }
   };
   inline void sendHandshake(net::Connection& connection,

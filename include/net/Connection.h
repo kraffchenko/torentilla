@@ -5,6 +5,7 @@
 #include <vector>
 #include <bitset>
 #include <memory>
+#include "torrent/protocol/Buffer.h"
 #include "boost/asio.hpp"
 #include "torrent/dottorrent/Metadata.h"
 #include "torrent/protocol/Message.h"
@@ -28,8 +29,8 @@ namespace net{
     bool m_is_established{false};
     bool m_is_closed{false};
     bool m_bitfield_sent{false};
-    std::vector<std::byte> m_out_buffer{};
-    std::vector<std::byte> m_in_buffer{};
+    Buffer m_out_buffer{};
+    Buffer m_in_buffer{};
     Connection(boost::asio::any_io_executor io_exec);
     Connection(boost::asio::io_context& io_context);
     boost::asio::ip::tcp::socket& getSocket();
