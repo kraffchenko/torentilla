@@ -1,16 +1,17 @@
 #include "net/CommunicationManager.h"
 namespace net{
-  bool CommunicationManager::connectionExists(net::Connection& connection){  
-    if(m_connections.contains(connection.getSocket().remote_endpoint().address().to_string())){
+  bool CommunicationManager::connectionExists(std::string& ip){  
+    if(m_connections.contains(ip)){
       return true;
     }else{
       return false;
     }
   }
   void CommunicationManager::addConnection(net::Connection&& connection){
-   if(!connectionExists(connection)){
-      m_connections.insert({connection.getSocket().remote_endpoint().address().to_string(), std::move(connection)});
-    } 
+    m_connections.insert({connection.getSocket().remote_endpoint().address().to_string(), std::move(connection)}); 
+  }
+  void CommunicationManager::addConnection(std::string& ip, net::Connection&& connection){
+    m_connections.insert({ip, std::move(connection)}); 
   }
   int CommunicationManager::addPendingConnection(net::Connection&& connection){
     int pending_amount {static_cast<int>(m_pending_connections.size())};

@@ -10,8 +10,7 @@
 namespace torrent{
   class File{
   public:
-    std::string m_path{};
-    std::string m_file_name{};
+    std::filesystem::path m_file_path{};
     torrent::ResumeFile& m_resume_file;
     torrent::dottorrent::Metadata& m_metadata;
     void writeInFile(const std::vector<std::byte>& data,

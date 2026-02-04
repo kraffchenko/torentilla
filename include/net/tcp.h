@@ -36,7 +36,6 @@ namespace net::tcp{
                           message::Piece);
 }
 namespace{
-
   inline void handleWrite(net::Connection& connection,
                           net::CommunicationManager& com_manager,
                           const boost::system::error_code& error, 
@@ -53,10 +52,10 @@ namespace{
                               const boost::system::error_code& error,
                               size_t bytes_transferred){
     if(!error){
-      std::cout << "Handshake sent.";
+      std::cout << "Handshake sent." << '\n';
       connection.m_handshake_sent = true;
     }else{
-      std::cerr << "Error while sending handshake: " << error.what();
+      std::cerr << "Error while sending handshake: " << error.what() << '\n';
     }
   };
   inline void handleMessage(net::Connection& connection, message::State message, net::CommunicationManager& com_manager){
@@ -87,6 +86,7 @@ namespace{
     Bitfield& local_bitfield{com_manager.getFile().
                              m_resume_file.getBitfield()};
     std::vector<std::byte> remote_bitfield{message.bitfield_as_byte_array};
+    std::cout << local_bitfield.getBitfield().size() << "btf" << '\n';
     if(local_bitfield.getBitfield().size() == remote_bitfield.size()){
       std::vector<size_t> missing_pieces{getMissingPieces(local_bitfield.getBitfield(), remote_bitfield)};
       if(missing_pieces.back() > local_bitfield.getPiecesAmount()){
@@ -94,6 +94,7 @@ namespace{
       }else{
        for(size_t index : missing_pieces){
         com_manager.getPieceManager().addConnection(index, connection);
+        std::cout << "Remote Peer has piece: " << index << '\n';
         // send a request for a random piece
         } 
       }
@@ -145,9 +146,9 @@ namespace{
         if(std::size(connection.m_in_buffer) > static_cast<size_t>(message_length)){
           message::ID message_id {message::getMessageID(connection.m_in_buffer)};
           std::visit([&connection, &com_manager](auto&& message) { handleMessage(connection, message, com_manager); }, 
-                     message::createMessageFromBuffer(message_id, message_length, connection.m_in_buffer));
-          size_t message_end {static_cast<size_t>(message_length) + message::BytePos::ID};
-          connection.m_in_buffer.erase(connection.m_in_buffer.begin() + message_end);
+                     message::createMessageFromBuffer(message_id, message_length-1, connection.m_in_buffer.data()));
+          size_t message_end {static_cast<size_t>(message_length) + static_cast<size_t>(message::BytePos::ID)};
+          std::cout << static_cast<size_t>(message_length) << '\n'; 
         }
       }
       net::tcp::read(connection, com_manager);
@@ -166,6 +167,8 @@ namespace net::tcp{
   };
   inline void read(net::Connection& connection,
                    net::CommunicationManager& com_manager) {
+    //std::cout << "reading..." << '\n'; 
+
     connection.getSocket().async_read_some(buffer(connection.m_in_buffer),
                                            std::bind(handleRead,
                                            std::ref(connection),
@@ -185,20 +188,21 @@ namespace net::tcp{
   };
   inline void checkHandshake(net::Connection& connection,
                              net::CommunicationManager& com_manager){
-    if (std::size(connection.m_in_buffer) >= 67){
+    if(std::size(connection.m_in_buffer) >= 67){
       message::Handshake local_peer_handshake{.info_hash = com_manager.getFile().m_metadata.getInfoHash(),
                                               .peer_id = com_manager.getPeerId()};
       message::Handshake remote_peer_handshake{message::createHandshakeFromBuffer(connection.m_in_buffer)};
       if(local_peer_handshake == remote_peer_handshake){
         connection.m_handshake_is_valid = true;
-        std::cout << "Handshake successfull.";
+        std::cout << "Handshake successfull." << '\n';
       }else{
-        std::cerr << "Handshake failed. Closing connection to " << connection.getSocket().remote_endpoint().address();
+        std::cerr << "Handshake failed. Closing connection to " << connection.getSocket().remote_endpoint().address() << '\n';
         connection.m_handshake_is_valid = false;
         connection.m_is_closed = true;
         connection.getSocket().close();
       }
       connection.m_handshake_checked = true;
+      connection.m_in_buffer.erase(connection.m_in_buffer.begin(), connection.m_in_buffer.begin()+68);
     }
   };
   inline void sendHandshake(net::Connection& connection,
@@ -206,9 +210,8 @@ namespace net::tcp{
     message::Handshake handshake{};
     handshake.info_hash = com_manager.getFile().m_metadata.getInfoHash();
     handshake.peer_id = com_manager.getPeerId();
-    std::vector<std::byte> byte_array{handshake.inByteArray()}; 
-    connection.m_out_buffer.insert(connection.m_out_buffer.end(), byte_array.begin(), byte_array.end());
-    async_write(connection.getSocket(), buffer(handshake.inByteArray()),
+    std::pair<std::byte*, size_t> subbuffer{connection.createSubBuffer(handshake.inByteArray())};
+    async_write(connection.getSocket(), buffer(subbuffer.first, subbuffer.second),
                 std::bind(handleHandshake,
                           std::ref(connection),
                           placeholders::error,

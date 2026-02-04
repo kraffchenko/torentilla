@@ -10,6 +10,12 @@ namespace torrent::dottorrent{
             m_comment{comment}, m_created_by{created_by}, m_encoding{encoding}, m_is_private{is_private}, m_md5sum{md5sum}
           {
           };
+  std::string Metadata::getInfoHashAsString(){
+    std::string info_hash_string{};
+    info_hash_string.resize(20);
+    std::transform(m_info_hash.begin(), m_info_hash.end(), info_hash_string.begin(), [](std::byte bt) { return static_cast<char>(bt); } );
+    return info_hash_string;
+  }
 
   Metadata fromDotTorrent(std::string_view path){
     std::ifstream file{std::string{path}, std::ios::binary};

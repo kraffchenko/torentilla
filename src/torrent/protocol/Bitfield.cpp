@@ -15,7 +15,10 @@ namespace torrent::protocol{
     return block_and_bit;
   }
   std::string Bitfield::toString(){
-    return{std::string{reinterpret_cast<char*>(m_bitfield.data())}};
+    std::string bitfield_as_string{};
+    bitfield_as_string.resize(m_bitfield.size());
+    std::transform(m_bitfield.begin(), m_bitfield.end(), bitfield_as_string.begin(), [](std::byte bt) { return static_cast<char>(bt); } );
+    return bitfield_as_string;
   }
   Bitfield Bitfield::fromString(std::string_view bitfield_string, const size_t piece_amnt){
     std::vector<std::byte> bitfield(bitfield_string.size());

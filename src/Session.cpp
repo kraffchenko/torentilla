@@ -22,19 +22,27 @@ std::array<std::byte, 20> Session::generateID(){
   return peer_id;
 }
 void Session::downloadTorrent(const std::string_view dottorrent_path,
-                              const std::string_view path_to_install,
-                              const std::string_view filename_to_install){
+                              const std::string_view path_to_install){
   boost::asio::io_context cntx{};
   torrent::dottorrent::Metadata metadata {torrent::dottorrent::fromDotTorrent(dottorrent_path)};
-  torrent::ResumeFile resume_file{reinterpret_cast<const char*>(metadata.getInfoHash().data()), 
-                      filename_to_install, path_to_install, static_cast<size_t>(metadata.getLength()),
-                      static_cast<size_t>(metadata.getPieceLength())}; 
-  torrent::File download_file{path_to_install, filename_to_install, resume_file, metadata};
+  std::string event{"started"};
+  tracker::Request request{metadata, 6881, 0, 0, 0, true, false, event};
+  request.sendGetRequest(m_peer_id);
+  torrent::ResumeFile resume_file{ 
+    !std::filesystem::exists(torrent::ResumeFile::pathBasedOnHash(metadata.getInfoHashAsString()))
+    ? torrent::ResumeFile{metadata.getInfoHashAsString(), metadata.getName(), path_to_install,
+                          static_cast<size_t>(metadata.getLength()),
+                          (static_cast<size_t>(metadata.getLength()) / static_cast<size_t>(metadata.getPieceLength()))}
+    : torrent::ResumeFile{torrent::ResumeFile::fromFile(
+          torrent::ResumeFile::pathBasedOnHash(metadata.getInfoHashAsString()))}};
+    
+  torrent::File download_file{path_to_install, metadata.getName(), resume_file, metadata};
   net::CommunicationManager com_manager{download_file, m_peer_id}; 
   torrent::LocalPeer local_peer{cntx, com_manager};
   //local_peer.acceptConnection(download_file, m_peer_id);
   std::string ip {"192.168.122.253"};
   torrent::Peer remote_peer{ip, 6881};
+  //local_peer.acceptConnection(download_file, m_peer_id);
   local_peer.connect(remote_peer, download_file, m_peer_id);
   cntx.run();
 }

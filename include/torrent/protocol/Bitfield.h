@@ -15,7 +15,7 @@ namespace torrent::protocol{
     std::string toString();
     static Bitfield fromString(std::string_view bitfield_string, const size_t piece_amnt);
     std::pair<size_t, size_t> getBlockAndBitIndex(int piece_index);
-    Bitfield(size_t pieces_amnt) : m_pieces_amnt{pieces_amnt}, m_bitfield((pieces_amnt + 8 - 1) / 8){};
+    Bitfield(size_t pieces_amnt) : m_pieces_amnt{pieces_amnt}, m_bitfield((pieces_amnt - 1) / 8){};
   private:
     Bitfield(std::vector<std::byte>& bitfield, const size_t piece_amnt) : m_bitfield{bitfield}, m_pieces_amnt{piece_amnt}{};
     size_t m_pieces_amnt{};

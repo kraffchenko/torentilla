@@ -7,12 +7,14 @@ namespace torrent{
   void LocalPeer::connect(torrent::Peer& remote_peer, torrent::File& file, std::array<std::byte, 20>& peer_id){
     std::cout << "Trying to connect to " << remote_peer.getIp() << "..." << '\n';
     net::Connection connection {net::Connection{m_acceptor.get_executor()}};
-    if(!m_com_manager.connectionExists(connection)){
-      m_com_manager.addConnection(std::move(connection));
+    std::string ip {remote_peer.getIp()};
+    if(!m_com_manager.connectionExists(ip)){
+      m_com_manager.addConnection(ip, std::move(connection));
       std::string ip{remote_peer.getIp()};
       m_com_manager.getConnection(ip).getSocket().async_connect(
                             remote_peer.getEndpoint(),
                             [this, &con = m_com_manager.getConnection(ip), &peer_id, &file](const boost::system::error_code& error) mutable {
+
       handleOutConnection(con, peer_id, file, error);
       });
     }else{
@@ -39,7 +41,7 @@ namespace torrent{
       boost::asio::ip::tcp::endpoint remote_endpoint{connection_socket.remote_endpoint()};
       std::string remote_ip{remote_endpoint.address().to_string()};
       int port{static_cast<int>(remote_endpoint.port())};
-      if(m_com_manager.connectionExists(connection)){
+      if(m_com_manager.connectionExists(remote_ip)){
         std::cout << "Accepted connection from " << remote_ip << " is closed due to redundancy." << '\n';
         m_com_manager.closePendingConnection(index);
       }else{
@@ -65,7 +67,7 @@ namespace torrent{
       net::tcp::read(connection, m_com_manager);
       net::tcp::sendHandshake(connection, m_com_manager);
     }else{
-      std::cout << err.what() << '\n';
+      std::cout << err.value() << '\n';
     }
   }
 }

@@ -33,7 +33,7 @@ namespace net{
     Connection(boost::asio::any_io_executor io_exec);
     Connection(boost::asio::io_context& io_context);
     boost::asio::ip::tcp::socket& getSocket();
-    boost::asio::const_buffer createSubBuffer(std::vector<std::byte> message_as_ba);
+    std::pair<std::byte*, size_t> createSubBuffer(std::vector<std::byte> message_as_ba);
   };
 }
 #endif

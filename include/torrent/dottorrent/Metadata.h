@@ -31,7 +31,8 @@ class Metadata {
     std::string_view getPieces() const { return m_pieces; };
     std::string_view getName() const { return m_name; };
     int64_t getLength() const { return m_length; };
-    std::array<std::byte, 20> getInfoHash() const { return m_info_hash; }; 
+    std::array<std::byte, 20> getInfoHash() const { return m_info_hash; };
+    std::string getInfoHashAsString();
 
     std::optional<std::string_view> getComment() const { return m_comment; };
     std::optional<std::string_view> getEncoding() const { return m_encoding; };

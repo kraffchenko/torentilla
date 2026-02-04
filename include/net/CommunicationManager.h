@@ -19,12 +19,13 @@ namespace net{
     };
     bool connectionIsPending(net::Connection& connection);
     void addConnection(net::Connection&&);
+    void addConnection(std::string& ip, net::Connection&&);
     void closePendingConnection(int index);
     void closeConnection(net::Connection& connection);
     int addPendingConnection(net::Connection&&);
     net::Connection& getConnection(std::string& ip);
     net::Connection& getPendingConnection(int index);
-    bool connectionExists(net::Connection& connection);
+    bool connectionExists(std::string& ip);
   private:
     std::map<std::string, net::Connection> m_connections{};
     std::map<int, net::Connection> m_pending_connections{};

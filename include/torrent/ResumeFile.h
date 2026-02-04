@@ -17,30 +17,37 @@ using namespace torrent::protocol;
 namespace torrent{
   class ResumeFile{
   public:
-    static constexpr std::string m_default_suffix{".res"};
-    static constexpr std::string m_temp_suffix{".res.tmp"};
+    static inline std::filesystem::path m_home {std::getenv("HOME")};
+    static inline std::filesystem::path m_default_directory {m_home 
+                                                             / ".config"
+                                                             / "torrentilla"
+                                                             / "resume/"};
+    enum class WriteLocation{
+      temp,
+      def
+    };
+    static inline std::filesystem::path pathBasedOnHash(std::string_view info_hash){
+      return m_default_directory / (std::string{info_hash} + ".res");
+    };
+
     int64_t getUploaded();
     int64_t getDownloaded();
     int64_t getLeft();
     Bitfield& getBitfield();
+    std::filesystem::path& getWriteLocation(WriteLocation write_location);
     void setUploaded(const int64_t bytes);
     void setDownloaded(const int64_t bytes);
     void setLeft(const int64_t bytes);
     ResumeFile(std::string_view info_hash_string, std::string_view file_name, std::string_view file_path, size_t file_size, size_t piece_amnt);
-    static ResumeFile fromFile(const std::string_view file_path, const std::string_view file_name);
-    void writeFile(const std::string_view file_name, const std::string_view suffix);
+    static ResumeFile fromFile(std::filesystem::path path_to_res_file);
+    void writeFile(WriteLocation write_location);
   private:
     ResumeFile(std::string_view info_hash_string, std::string_view file_name, 
                std::string_view file_path, int64_t downloaded,
                int64_t uploaded, int64_t left, Bitfield& bitfield);
-    std::filesystem::path home_dir {std::getenv("HOME")};
-    std::filesystem::path m_file_path{home_dir 
-                                      / ".config"
-                                      / "torrentilla"
-                                      / "resume/"};
-    std::string m_file_name{};
-    std::string m_root_file_path{};
-    std::string m_root_file_name{};
+    std::filesystem::path m_temp_path{};
+    std::filesystem::path m_def_path{};
+    std::filesystem::path m_ref_torrent_path{};
     int64_t m_downloaded{0};
     int64_t m_uploaded{0};
     int64_t m_left{};
