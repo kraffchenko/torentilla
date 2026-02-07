@@ -134,30 +134,56 @@ namespace{
       std::cerr << "Error with writing a state message.";
     }
   }
+  inline void processPayload(net::Connection& connection, net::CommunicationManager& com_manager, size_t bytes_transferred){
+    connection.m_in_buffer.setFilled(bytes_transferred);
+    std::cout << "processPayload: " << bytes_transferred << " transported." << '\n';
+    if(connection.m_in_buffer.filled() >= 4 && !connection.m_in_buffer.isProcessingMessage()){
+      connection.m_in_buffer.setLength(message::getIntFromBytes(&connection.m_in_buffer[message::BytePos::LEN]));
+      std::cout << "processPayload: Length set to" << connection.m_in_buffer.length() << " bytes." << '\n';
+      if(connection.m_in_buffer.size() < connection.m_in_buffer.length()){
+        connection.m_in_buffer.resize(connection.m_in_buffer.length());
+        std::cout << "processPayload: Buffer is bein resized to " << connection.m_in_buffer.length() << " bytes." << '\n';
+      }
+    }
+    if(connection.m_in_buffer.filled() >= connection.m_in_buffer.length()){
+      message::ID message_id {message::getMessageID(connection.m_in_buffer)};
+      std::cout << "processPayload: Processing message..." << '\n';
+      std::visit([&connection, &com_manager](auto&& message) { handleMessage(connection, message, com_manager); }, 
+                 message::createMessageFromBuffer(message_id, connection.m_in_buffer.length()-1, connection.m_in_buffer));
+      size_t processed_bytes {connection.m_in_buffer.length()};
+      connection.m_in_buffer.reset(processed_bytes);
+      std::cout << "processPayload: Buffer reset." << '\n';
+      if(connection.m_in_buffer.filled() > processed_bytes){
+        std::cout << "processPayload: Buffer contains more than one message, repeating processing." << '\n';
+        processPayload(connection, com_manager, bytes_transferred - processed_bytes);
+      }
+    }else{
+      std::cout << "processPayload: Message not complete, repeating read without reset." << '\n';
+      connection.m_in_buffer.processing(true);
+    }
+  };
   inline void handleRead(net::Connection& connection,
                          net::CommunicationManager& com_manager,
                          const boost::system::error_code& error, 
                          size_t bytes_transferred){
-    if(!error && !connection.m_is_closed){
-      if(!connection.m_handshake_checked){
-        net::tcp::checkHandshake(connection, com_manager); 
-      }else if(connection.m_in_buffer.size() >= 4){
-        int message_length {message::getIntFromBytes(&connection.m_in_buffer[message::BytePos::LEN])};
-        if(connection.m_in_buffer.size() >= static_cast<size_t>(message_length)){
-          message::ID message_id {message::getMessageID(connection.m_in_buffer)};
-          std::visit([&connection, &com_manager](auto&& message) { handleMessage(connection, message, com_manager); }, 
-                     message::createMessageFromBuffer(message_id, message_length-1, connection.m_in_buffer));
-          std::cout << static_cast<size_t>(message_length) << '\n'; 
-        }
-      }
-      net::tcp::read(connection, com_manager);
-    }else if(connection.m_is_closed){
+    if(connection.m_is_closed){
       std::cout << "Connection was closed." << '\n';
-    }else {
+      return;
+    }else if(error){
       std::cout << "Error while reading: " << error.what() << '\n';
+      return;
     }
+    if(!connection.m_handshake_checked){
+      net::tcp::checkHandshake(connection, com_manager);
+    }else{
+      processPayload(connection, com_manager, bytes_transferred);
+    }
+    net::tcp::read(connection, com_manager);
+
   };
+
 }
+
 namespace net::tcp{
   inline void startCommunication(net::Connection& connection,
                                  net::CommunicationManager& com_manager){
@@ -185,9 +211,12 @@ namespace net::tcp{
                           placeholders::error, 
                           placeholders::bytes_transferred));
   };
-  inline void checkHandshake(net::Connection& connection,
-                             net::CommunicationManager& com_manager){
-    if(connection.m_in_buffer.size() >= 67){
+  inline void processHandshake(net::Connection& connection,
+                               net::CommunicationManager& com_manager){
+    if(connection.m_in_buffer.filled() >= message::Handshake::m_default_length){
+
+    } 
+    if(connection.m_in_buffer.filled() >= 68){
       message::Handshake local_peer_handshake{.info_hash = com_manager.getFile().m_metadata.getInfoHash(),
                                               .peer_id = com_manager.getPeerId()};
       message::Handshake remote_peer_handshake{message::createHandshakeFromBuffer(connection.m_in_buffer)};
