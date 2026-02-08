@@ -65,12 +65,12 @@ namespace torrent::protocol::message{
     ID id{};
   };
   struct Handshake{
+    static constexpr size_t m_default_length{68};
     std::byte pstrlen{static_cast<std::byte>(19)};
     std::string pstr{"BitTorrent protocol"};
     std::array<std::byte, 8> reserved{};
     std::array<std::byte, 20> info_hash{};
     std::array<std::byte, 20> peer_id{};
-    
     bool operator == (const Handshake& handshake) const{
        return pstrlen == handshake.pstrlen &&
               pstr == handshake.pstr && 
