@@ -12,6 +12,7 @@ namespace torrent::protocol{
     bool areConnectionsWithPiece(size_t index);
     void addConnection(size_t index, net::Connection&);
     void initializePieces(size_t file_size, size_t piece_size);
+    Piece& getPiece(size_t index);
   private:
     std::vector<torrent::protocol::Piece> m_all_pieces{};
     std::vector<std::vector<std::reference_wrapper<net::Connection>>> m_connections{};

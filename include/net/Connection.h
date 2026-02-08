@@ -29,6 +29,7 @@ namespace net{
     bool m_is_established{false};
     bool m_is_closed{false};
     bool m_bitfield_sent{false};
+    bool m_bitfield_received{false};
     Buffer m_out_buffer{};
     Buffer m_in_buffer{};
     Connection(boost::asio::any_io_executor io_exec);

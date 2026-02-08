@@ -17,6 +17,9 @@ namespace torrent::protocol{
   void PieceManager::addConnection(size_t index, net::Connection& connection){
     m_connections.at(index).push_back(connection);
   };
+  Piece& PieceManager::getPiece(size_t index){
+    return m_all_pieces[index];
+  };
   void PieceManager::initializePieces(size_t file_size, size_t piece_size){
     size_t last_piece_size {calculateLastPieceSize(file_size, piece_size)};
     size_t block_size {calculateBlockSize(piece_size)};

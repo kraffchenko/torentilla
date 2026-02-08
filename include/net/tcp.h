@@ -11,31 +11,15 @@ namespace net::tcp{
   inline void startCommunication();
   inline void read(net::Connection& connection,
                    net::CommunicationManager& com_manager);
+  inline void write(net::Connection& connection,
+                    net::CommunicationManager& com_manager);
   inline void sendHandshake(Connection& connection, net::CommunicationManager& com_manager);
+  template<typename T>
+  inline void sendMessage(net::Connection& connection,
+                          net::CommunicationManager& com_manager,
+                          T message);
 }
 namespace{
-  inline void handleWrite(net::Connection& connection,
-                          net::CommunicationManager& com_manager,
-                          const boost::system::error_code& error, 
-                          size_t bytes_transferred){
-    if(!error){
-      if(!connection.m_bitfield_sent){
-        
-      }
-    }else{
-
-    }
-  };
-  inline void handleHandshake(net::Connection& connection,
-                              const boost::system::error_code& error,
-                              size_t bytes_transferred){
-    if(error){
-      std::cout << "handleHandshake: Error while writing." << '\n';
-      return;
-    }
-    std::cout << "handleHandshake: Handshake was written." << '\n';
-    connection.m_out_buffer.reset(bytes_transferred);
-  };
   inline void handleMessage(net::Connection& connection, message::State message, net::CommunicationManager& com_manager){
     if(message.msg_params.id == message::ID::choke){
       std::cout << "Choke sent." << '\n';
@@ -55,11 +39,13 @@ namespace{
                             message::Have message, 
                             net::CommunicationManager& com_manager){
     torrent::protocol::Bitfield& bitfield{com_manager.getFile().m_resume_file.getBitfield()};
-    if(bitfield.getPiecesAmount() <= message.piece_index){
-      if(!bitfield.hasPiece(message.piece_index)){
-          com_manager.getPieceManager().addConnection(message.piece_index, connection);
-          //send one block and handle the rest in proactive write function
-       }
+    if(bitfield.getPiecesAmount() < message.piece_index){
+      com_manager.closeConnection(connection);
+      return;
+    }
+    if(!bitfield.hasPiece(message.piece_index)){
+      com_manager.getPieceManager().addConnection(message.piece_index, connection);
+      //send one block and handle the rest in proactive write function
     }
   };
   inline void handleMessage(net::Connection& connection,
@@ -68,21 +54,19 @@ namespace{
     Bitfield& local_bitfield{com_manager.getFile().
                              m_resume_file.getBitfield()};
     std::vector<std::byte> remote_bitfield{message.bitfield_as_byte_array};
-    std::cout << local_bitfield.getBitfield().size() << "btf" << '\n';
-    if(local_bitfield.getBitfield().size() == remote_bitfield.size()){
-      std::vector<size_t> missing_pieces{getMissingPieces(local_bitfield.getBitfield(), remote_bitfield)};
-      if(missing_pieces.back() > local_bitfield.getPiecesAmount()){
-        connection.getSocket().close();
-      }else{
-       for(size_t index : missing_pieces){
-        com_manager.getPieceManager().addConnection(index, connection);
-        //std::cout << "Remote Peer has piece: " << index << '\n';
-        // send a request for a random piece
-        } 
-      }
-    }else{
-      connection.getSocket().close();
+    if(!(local_bitfield.getBitfield().size() == remote_bitfield.size())){
+      com_manager.closeConnection(connection);
+      return;
     }
+    std::vector<size_t> missing_pieces{getMissingPieces(local_bitfield.getBitfield(), remote_bitfield)};
+    if(missing_pieces.back() > local_bitfield.getPiecesAmount()){
+      com_manager.closeConnection(connection);
+      return;
+    }
+    for(size_t index : missing_pieces){
+      com_manager.getPieceManager().addConnection(index, connection);
+    } 
+    connection.m_bitfield_received = true;
   };
   inline void handleMessage(net::Connection& connection,
                             message::Action message,
@@ -102,13 +86,26 @@ namespace{
     std::transform(it, it+19, 
                    metadata_hash.begin(),
                    [](char ch){return static_cast<std::byte>(ch); });
-    if(piece_hash == metadata_hash){
-      com_manager.getFile().writeInFile(message.block, message.index, message.begin);
-    }else{
-      connection.getSocket().close();
-      //add a connection to a ban list
+    if(!(piece_hash == metadata_hash)){
+      com_manager.closeConnection(connection);
+    }
+    //check if the block was written correctly
+    com_manager.getFile().writeInFile(message.block, message.index, message.begin);
+    if(!com_manager.getPieceManager().getPiece(message.index).markBlockAsDone({message.begin, message.block.size()})){
+     com_manager.closeConnection(connection); 
     }
   };
+  inline void handleHandshake(net::Connection& connection,
+                              const boost::system::error_code& error,
+                              size_t bytes_transferred){
+    if(error){
+      std::cout << "handleHandshake: Error while writing." << '\n';
+      return;
+    }
+    std::cout << "handleHandshake: Handshake was written." << '\n';
+    connection.m_out_buffer.reset(bytes_transferred);
+  };
+
   inline void handleSend(net::Connection& connection, net::CommunicationManager& com_manager, 
                          const boost::system::error_code& error){
     if(error){
@@ -211,6 +208,27 @@ namespace{
     }
     net::tcp::read(connection, com_manager);
   };
+  inline void handleWrite(net::Connection& connection,
+                         net::CommunicationManager& com_manager,
+                         const boost::system::error_code& error, 
+                         size_t bytes_transferred){
+    if(connection.m_is_closed){
+      std::cout << "Connection was closed." << '\n';
+      return;
+    }else if(error){
+      std::cout << "Error while writing: " << error.what() << '\n';
+      return;
+    }
+    
+
+    //Piece& piece {com_manager.getPieceManager().getPiece(index)};
+    //if(piece.hasBlockToDownload()){
+    //  Block& block{piece.getBlockToDownload()};
+    //  message::Action request{message::Params{message::length::REQUEST, message::ID::request}, index, block.getOffset(), block.getSize()};
+    //  net::tcp::sendMessage(connection, com_manager, request);
+    //}
+    net::tcp::write(connection, com_manager);
+  };
 }
 
 namespace net::tcp{
@@ -223,6 +241,17 @@ namespace net::tcp{
     std::cout << "reading..." << '\n'; 
     connection.getSocket().async_read_some(buffer(connection.m_in_buffer.getAvailableRange()),
                                            std::bind(handleRead,
+                                           std::ref(connection),
+                                           std::ref(com_manager),
+                                           placeholders::error,
+                                           placeholders::bytes_transferred)); 
+  };
+
+  inline void write(net::Connection& connection,
+                   net::CommunicationManager& com_manager) {
+    std::cout << "writing..." << '\n'; 
+    connection.getSocket().async_write_some(buffer(connection.m_out_buffer.getRange(0, connection.m_out_buffer.filled())),
+                                           std::bind(handleWrite,
                                            std::ref(connection),
                                            std::ref(com_manager),
                                            placeholders::error,

@@ -48,13 +48,28 @@ namespace torrent::protocol{
       }
     }
   }
-  void Piece::markBlockAsDone(Block& block){
-    auto it{std::find(m_blocks.begin(),
-                      m_blocks.end(),
-                      block)};
+  bool Piece::markBlockAsDone(Block& block){
+    auto it{std::find_if(m_blocks.begin(), m_blocks.end(), 
+                         [&](Block& l_block){ return l_block.getOffset() == block.getOffset()
+                                              && l_block.getSize() == block.getSize();})};
+    if(it == m_blocks.end()){
+      return false;
+    }
     block.m_being_downloaded = false;
     block.m_was_downloaded = true;
     m_blocks_remained -= 1;
+    return true;
   }
-
+  bool Piece::markBlockAsDone(Block&& block){
+    auto it{std::find_if(m_blocks.begin(), m_blocks.end(), 
+                         [&](Block& l_block){ return l_block.getOffset() == block.getOffset()
+                                              && l_block.getSize() == block.getSize();})};
+    if(it == m_blocks.end()){
+      return false;
+    }
+    (*it).m_being_downloaded = false;
+    (*it).m_was_downloaded = true;
+    m_blocks_remained -= 1;
+    return true;
+  }
 }
