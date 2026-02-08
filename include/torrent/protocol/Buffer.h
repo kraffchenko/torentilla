@@ -6,6 +6,8 @@
 namespace torrent::protocol{ 
   class Buffer{
   public:
+    void move(std::vector<std::byte>&& payload);
+    void insert(std::vector<std::byte>&& payload);
     std::span<std::byte> getAvailableRange();
     std::span<std::byte> getRange();
     std::span<std::byte> getRange(size_t start, size_t end);

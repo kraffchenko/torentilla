@@ -64,8 +64,8 @@ namespace torrent{
                                                      .remote_endpoint()};
       std::string remote_ip{remote_endpoint.address().to_string()};
       std::cout << "Successfully connected to " << remote_ip << "." << '\n';
-      net::tcp::read(connection, m_com_manager);
       net::tcp::sendHandshake(connection, m_com_manager);
+      net::tcp::read(connection, m_com_manager);
     }else{
       std::cout << err.value() << '\n';
     }

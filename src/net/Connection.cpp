@@ -19,24 +19,13 @@ namespace net{
   : m_socket{io_context.get_executor()}
   {
     m_socket.open(boost::asio::ip::tcp::v4());
-    m_in_buffer.resize(2048);
   }
   Connection::Connection(boost::asio::any_io_executor io_exec)
   : m_socket {io_exec}
   {
     m_socket.open(boost::asio::ip::tcp::v4());
-    m_in_buffer.resize(2048);
   }
   boost::asio::ip::tcp::socket& Connection::getSocket(){
     return m_socket;
   }
-  std::pair<std::byte*, size_t> Connection::createSubBuffer(std::vector<std::byte> message_as_ba){
-    size_t end_index {m_out_buffer.size()};
-    m_out_buffer.insert(m_out_buffer.end(), message_as_ba.begin(),
-                        message_as_ba.end());
-    size_t sub_buffer_size{m_out_buffer.size() - end_index};
-    std::byte* sub_buffer{&(*m_out_buffer.end()) - sub_buffer_size};
-    return {sub_buffer, sub_buffer_size};
-  }
-
 }
