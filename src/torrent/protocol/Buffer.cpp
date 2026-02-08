@@ -17,8 +17,15 @@ namespace torrent::protocol{
   void Buffer::resize(size_t size){
     m_buffer.resize(size);
   };
+  void Buffer::rotate(size_t amount){
+    std::rotate(m_buffer.begin(),m_buffer.begin() + amount, m_buffer.end());
+  };
   void Buffer::reset(size_t processed_bytes){
-    m_buffer.resize(m_default_buffer_size);
+    if(m_buffer.size() > m_default_buffer_size){
+      m_buffer.resize(m_default_buffer_size);
+      std::cout << "Resizing buffer back to the default size..." << '\n';
+    }
+    processing(false);
     m_length = 0;
     m_filled -= processed_bytes;
   };

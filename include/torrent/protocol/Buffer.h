@@ -19,6 +19,7 @@ namespace torrent::protocol{
     void setFilled(size_t filled);
     void setLength(size_t length);
     size_t size();
+    void rotate(size_t amount);
     size_t filled();
     size_t length();
     size_t capacity();
