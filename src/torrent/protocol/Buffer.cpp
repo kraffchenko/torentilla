@@ -11,6 +11,27 @@ namespace torrent::protocol{
   {
     m_buffer.resize(m_default_buffer_size);
   };
+  void Buffer::move(std::vector<std::byte>&& payload){
+    setLength(payload.size());
+    std::cout << "Buffer::move: Buffer length set to " << length() << " bytes."<< '\n';
+    setFilled(payload.size());
+    std::cout << "Buffer::move: Buffer is filled up to " << filled() << " bytes." << '\n'; 
+    m_buffer = std::move(payload);
+    std::cout << "Buffer::move: payload was moved into the buffer." << '\n';
+  };
+  void Buffer::insert(std::vector<std::byte>&& payload){
+    if(size() < length() + payload.size()){
+      std::cout << "Buffer::append: Resizing buffer to match the new length..." << '\n';
+      m_buffer.resize(length() + payload.size());
+      std::cout << "Buffer::append: Buffer resized to " << size() << " bytes." << '\n'; 
+    }
+    setLength(length() + payload.size());
+    std::cout << "Buffer::insert: Buffer length set to " << length() << " bytes."<< '\n';
+    m_buffer.insert(m_buffer.begin() + filled(), 
+                    std::make_move_iterator(payload.begin()), std::make_move_iterator(payload.end()));
+    setFilled(filled() + payload.size());
+    std::cout << "Buffer::insert: Buffer is filled up to " << filled() << " bytes." << '\n';
+  };
   void Buffer::reserve(size_t capacity){
     m_buffer.reserve(capacity);
   };
@@ -23,7 +44,7 @@ namespace torrent::protocol{
   void Buffer::reset(size_t processed_bytes){
     if(m_buffer.size() > m_default_buffer_size){
       m_buffer.resize(m_default_buffer_size);
-      std::cout << "Resizing buffer back to the default size..." << '\n';
+      std::cout << "Buffer::reset: Resizing buffer back to the default size..." << '\n';
     }
     processing(false);
     m_length = 0;

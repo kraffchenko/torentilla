@@ -11,27 +11,7 @@ namespace net::tcp{
   inline void startCommunication();
   inline void read(net::Connection& connection,
                    net::CommunicationManager& com_manager);
-  inline void write(net::Connection& connection,
-                    net::CommunicationManager& com_manager);
   inline void sendHandshake(Connection& connection, net::CommunicationManager& com_manager);
-  inline void sendMessage(net::Connection& connection,
-                          net::CommunicationManager& com_manager,
-                          message::State);
-  inline void sendMessage(net::Connection& connection,
-                          net::CommunicationManager& com_manager,
-                          message::State);
-  inline void sendMessage(net::Connection& connection,
-                          net::CommunicationManager& com_manager,
-                          message::Have);
-  inline void sendMessage(net::Connection& connection,
-                          net::CommunicationManager& com_manager,
-                          message::Bitfield);
-  inline void sendMessage(net::Connection& connection,
-                          net::CommunicationManager& com_manager,
-                          message::Action);
-  inline void sendMessage(net::Connection& connection,
-                          net::CommunicationManager& com_manager,
-                          message::Piece);
 }
 namespace{
   inline void handleWrite(net::Connection& connection,
@@ -49,12 +29,12 @@ namespace{
   inline void handleHandshake(net::Connection& connection,
                               const boost::system::error_code& error,
                               size_t bytes_transferred){
-    if(!error){
-      std::cout << "Handshake sent." << '\n';
-      connection.m_handshake_sent = true;
-    }else{
-      std::cerr << "Error while sending handshake: " << error.what() << '\n';
+    if(error){
+      std::cout << "handleHandshake: Error while writing." << '\n';
+      return;
     }
+    std::cout << "handleHandshake: Handshake was written." << '\n';
+    connection.m_out_buffer.reset(bytes_transferred);
   };
   inline void handleMessage(net::Connection& connection, message::State message, net::CommunicationManager& com_manager){
     if(message.msg_params.id == message::ID::choke){
@@ -129,12 +109,14 @@ namespace{
       //add a connection to a ban list
     }
   };
-  inline void handleSend(const boost::system::error_code& error){
-    if(!error){
-      std::cout << "State message was written." << '\n';
-    }else{
-      std::cerr << "Error with writing a state message." << '\n';
+  inline void handleSend(net::Connection& connection, net::CommunicationManager& com_manager, 
+                         const boost::system::error_code& error){
+    if(error){
+      std::cout << "handleSend: Error while writing." << '\n';
+      return;
     }
+    std::cout << "handleSend: Message was written" << '\n';
+    connection.m_out_buffer.reset(connection.m_out_buffer.filled());
   }
   inline void setupMessageBuffer(net::Connection& connection, size_t bytes_transferred){
     connection.m_in_buffer.setFilled(bytes_transferred);
@@ -235,72 +217,40 @@ namespace net::tcp{
   inline void startCommunication(net::Connection& connection,
                                  net::CommunicationManager& com_manager){
     read(connection, com_manager);
-    write(connection, com_manager);
   };
   inline void read(net::Connection& connection,
                    net::CommunicationManager& com_manager) {
     std::cout << "reading..." << '\n'; 
-    connection.getSocket().async_read_some(buffer(connection.m_in_buffer.getRange()),
+    connection.getSocket().async_read_some(buffer(connection.m_in_buffer.getAvailableRange()),
                                            std::bind(handleRead,
                                            std::ref(connection),
                                            std::ref(com_manager),
                                            placeholders::error,
                                            placeholders::bytes_transferred)); 
   };
-  inline void write(net::Connection& connection,
-                    net::CommunicationManager& com_manager){
-    async_write(connection.getSocket(), 
-                buffer(connection.m_out_buffer),
-                std::bind(handleWrite,
-                          std::ref(connection),
-                          std::ref(com_manager),
-                          placeholders::error, 
-                          placeholders::bytes_transferred));
-  };
-
   inline void sendHandshake(net::Connection& connection,
                             net::CommunicationManager& com_manager){
     message::Handshake handshake{};
     handshake.info_hash = com_manager.getFile().m_metadata.getInfoHash();
     handshake.peer_id = com_manager.getPeerId();
-    std::pair<std::byte*, size_t> subbuffer{connection.createSubBuffer(handshake.inByteArray())};
-    async_write(connection.getSocket(), buffer(subbuffer.first, subbuffer.second),
+    connection.m_out_buffer.insert(handshake.inByteArray());
+    async_write(connection.getSocket(), buffer(connection.m_out_buffer.getRange(0, connection.m_out_buffer.filled())),
                 std::bind(handleHandshake,
                           std::ref(connection),
                           placeholders::error,
                           placeholders::bytes_transferred));
   };
-//  inline void sendMessage(net::Connection& connection,
-//                          net::CommunicationManager& com_manager,
-//                          message::State message){
-//    async_write(connection.getSocket(),
-//                buffer(connection.createSubBuffer(message.inByteArray())),
-//                std::bind(handleSend,
-//                placeholders::error));
-//  };
-//  inline void sendMessage(net::Connection& connection,
-//                          net::CommunicationManager& com_manager,
-//                          message::Have message){
-//    async_write(connection.getSocket(),
-//                buffer(connection.createSubBuffer(message.inByteArray())),
-//                std::bind(handleSend,
-//                placeholders::error));
-//  };
-//  inline void sendMessage(net::Connection& connection,
-//                          net::CommunicationManager& com_manager,
-//                          message::Have message){
-//    async_write(connection.getSocket(),
-//                buffer(connection.createSubBuffer(message.inByteArray())),
-//                std::bind(handleSend,
-//                placeholders::error));
-//  };
   template<typename T>
   inline void sendMessage(net::Connection& connection,
                           net::CommunicationManager& com_manager,
                           T message){
+    std::cout << "sendMessage: Moving a message into the buffer..." << '\n';
+    connection.m_out_buffer.insert(message.inByteArray());
     async_write(connection.getSocket(),
-                buffer(connection.createSubBuffer(message.inByteArray())),
+                buffer(connection.m_out_buffer.getRange(0, connection.m_out_buffer.filled())),
                 std::bind(handleSend,
+                std::ref(connection),
+                std::ref(com_manager),
                 placeholders::error));
   };
   
