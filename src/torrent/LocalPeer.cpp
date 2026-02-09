@@ -66,6 +66,7 @@ namespace torrent{
       std::cout << "Successfully connected to " << remote_ip << "." << '\n';
       net::tcp::sendHandshake(connection, m_com_manager);
       net::tcp::read(connection, m_com_manager);
+      net::tcp::write(m_com_manager);
     }else{
       std::cout << err.value() << '\n';
     }

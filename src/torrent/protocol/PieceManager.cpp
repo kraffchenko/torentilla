@@ -1,6 +1,8 @@
 #include "torrent/protocol/PieceManager.h"
 namespace torrent::protocol{
-  PieceManager::PieceManager(size_t file_size, size_t piece_size){
+  PieceManager::PieceManager(size_t file_size, size_t piece_size)
+  : m_range{0, m_all_pieces.size()}
+  {
     initializePieces(file_size, piece_size);
     m_connections.resize(m_all_pieces.size());
   };
@@ -20,6 +22,16 @@ namespace torrent::protocol{
   Piece& PieceManager::getPiece(size_t index){
     return m_all_pieces[index];
   };
+  size_t PieceManager::getRandomPieceIndex(){
+    return m_range(m_mt);
+  }
+  size_t PieceManager::getPiecesAmount(){
+    return m_all_pieces.size();
+  }
+  bool PieceManager::pieceIsReadyToDownload(size_t index){
+    return (!m_all_pieces[index].isCompleted() && m_all_pieces[index].hasBlockToDownload()
+            && areConnectionsWithPiece(index));
+  }
   void PieceManager::initializePieces(size_t file_size, size_t piece_size){
     size_t last_piece_size {calculateLastPieceSize(file_size, piece_size)};
     size_t block_size {calculateBlockSize(piece_size)};

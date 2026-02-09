@@ -47,7 +47,7 @@ namespace torrent::protocol{
   };
   class Piece{
   public:
-    int32_t getIndex();
+    size_t getIndex();
     size_t getPieceSize();
     bool isCompleted();
     bool hasBlockToDownload();

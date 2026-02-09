@@ -11,8 +11,7 @@ namespace net::tcp{
   inline void startCommunication();
   inline void read(net::Connection& connection,
                    net::CommunicationManager& com_manager);
-  inline void write(net::Connection& connection,
-                    net::CommunicationManager& com_manager);
+  inline void write(net::CommunicationManager& com_manager);
   inline void sendHandshake(Connection& connection, net::CommunicationManager& com_manager);
   template<typename T>
   inline void sendMessage(net::Connection& connection,
@@ -184,6 +183,8 @@ namespace{
      return; 
     }
     connection.m_in_buffer.reset(connection.m_in_buffer.filled());
+    message::State choke{message::Params{message::length::STATE, message::ID::choke}};
+    net::tcp::sendMessage(connection, com_manager, choke);
     if(bytes_transferred > message::Handshake::m_default_length){
       std::cout << "processHandshake: Buffer contains extra bytes, calling processPayload..." << '\n';
       connection.m_in_buffer.rotate(message::Handshake::m_default_length);
@@ -227,7 +228,7 @@ namespace{
     //  message::Action request{message::Params{message::length::REQUEST, message::ID::request}, index, block.getOffset(), block.getSize()};
     //  net::tcp::sendMessage(connection, com_manager, request);
     //}
-    net::tcp::write(connection, com_manager);
+    net::tcp::write( com_manager);
   };
 }
 
@@ -247,15 +248,34 @@ namespace net::tcp{
                                            placeholders::bytes_transferred)); 
   };
 
-  inline void write(net::Connection& connection,
-                   net::CommunicationManager& com_manager) {
+  inline void write(net::CommunicationManager& com_manager) {
+    // do smth like this without blocking thread
     std::cout << "writing..." << '\n'; 
-    connection.getSocket().async_write_some(buffer(connection.m_out_buffer.getRange(0, connection.m_out_buffer.filled())),
-                                           std::bind(handleWrite,
-                                           std::ref(connection),
-                                           std::ref(com_manager),
-                                           placeholders::error,
-                                           placeholders::bytes_transferred)); 
+    size_t random_piece_index {com_manager.getPieceManager().getRandomPieceIndex()};
+    if(!com_manager.getPieceManager().pieceIsReadyToDownload(random_piece_index)){
+      return;
+    }
+    std::vector<std::reference_wrapper<net::Connection>>& connections_array{com_manager.getPieceManager().getConnectionsByIndex(random_piece_index)};
+    size_t i{};
+    bool first_iter {true};
+    while(com_manager.getPieceManager().getPiece(random_piece_index).hasBlockToDownload()){
+     if(i == (connections_array.size() -1)){
+      i = 0;
+      first_iter = false;
+     }
+     if(connections_array[i].get().m_peer_choking && first_iter){
+      message::State interested{message::Params{message::length::STATE, message::ID::interested}};
+      net::tcp::sendMessage(connections_array[i].get(), com_manager, interested);
+     }
+     if(!connections_array[i].get().m_peer_choking){
+       Block& block{com_manager.getPieceManager().getPiece(random_piece_index).getBlockToDownload()}; 
+       message::Action request{message::Params{message::length::REQUEST, message::ID::request}, 
+                                               random_piece_index, block.getOffset(), block.getSize()}; 
+       sendMessage(connections_array[i].get(), com_manager, request);
+     }
+     i++;
+    }
+    net::tcp::write(com_manager);
   };
   inline void sendHandshake(net::Connection& connection,
                             net::CommunicationManager& com_manager){

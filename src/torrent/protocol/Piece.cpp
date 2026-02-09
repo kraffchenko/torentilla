@@ -7,7 +7,7 @@ namespace torrent::protocol{
     m_blocks.shrink_to_fit();
     m_blocks_remained = m_blocks.size();
   }
-  int32_t Piece::getIndex(){
+  size_t Piece::getIndex(){
     return m_index;
   };
   bool Piece::isCompleted(){
