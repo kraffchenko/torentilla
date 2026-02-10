@@ -1,7 +1,7 @@
 #include "torrent/LocalPeer.h"
 namespace torrent{
-  LocalPeer::LocalPeer(boost::asio::io_context& io_context, net::CommunicationManager& com_manager)
-  : m_acceptor{io_context}, m_com_manager{com_manager}
+  LocalPeer::LocalPeer(boost::asio::io_context& io_context, CommunicationManager& com_manager, torrent::protocol::PieceManager& piece_manager)
+  : m_acceptor{io_context}, m_com_manager{com_manager}, m_piece_manager{piece_manager}
   {
   } 
   void LocalPeer::connect(torrent::Peer& remote_peer, torrent::File& file, std::array<std::byte, 20>& peer_id){
@@ -48,8 +48,8 @@ namespace torrent{
         std::cout << "Connection request from " << remote_ip << " was accepted." << '\n';
         std::cout << "Connection successfully established.";
         m_com_manager.addConnection(std::move(connection));
-        net::tcp::read(connection, m_com_manager);
-        net::tcp::sendHandshake(connection, m_com_manager);
+        read::read(connection, m_com_manager, m_piece_manager);
+        write::sendHandshake(connection, m_com_manager);
       }
     }else{
       std::cout << error.what() << '\n';
@@ -64,9 +64,8 @@ namespace torrent{
                                                      .remote_endpoint()};
       std::string remote_ip{remote_endpoint.address().to_string()};
       std::cout << "Successfully connected to " << remote_ip << "." << '\n';
-      net::tcp::sendHandshake(connection, m_com_manager);
-      net::tcp::read(connection, m_com_manager);
-      net::tcp::write(m_com_manager);
+      write::sendHandshake(connection, m_com_manager);
+      read::read(connection, m_com_manager, m_piece_manager);
     }else{
       std::cout << err.value() << '\n';
     }

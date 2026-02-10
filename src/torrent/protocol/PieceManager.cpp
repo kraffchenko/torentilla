@@ -13,6 +13,9 @@ namespace torrent::protocol{
       return false;
     }
   };
+  bool PieceManager::allPiecesAreCompleted(){
+    return m_completed_pieces == m_all_pieces.size();
+  };
   std::vector<std::reference_wrapper<net::Connection>>& PieceManager::getConnectionsByIndex(int index){
    return m_connections.at(index); 
   };
@@ -47,5 +50,43 @@ namespace torrent::protocol{
       piece_index ++;
     }
   };
-
+  void PieceManager::setPieceToDownload(){
+    if(m_piece_is_set){
+      return;
+    }
+    size_t rarest_piece_index{SIZE_MAX};
+    size_t rarest_piece_owners{SIZE_MAX};
+    for(size_t i{}; i< m_all_pieces.size(); i++){
+      if(m_all_pieces[i].isCompleted()){
+        continue;
+      }
+      if(m_connections[i].size() < rarest_piece_owners){
+        rarest_piece_index = i;
+        rarest_piece_owners = m_connections[i].size();
+      }
+    }
+    //add error handling
+    m_piece_to_download = rarest_piece_index;
+    m_piece_is_set = true;
+  };
+  void PieceManager::startDownloadProcess(){
+    if(m_piece_is_set || allPiecesAreCompleted()){
+      return;
+    }
+    setPieceToDownload();
+    bool all_are_choking{true};
+    while(m_all_pieces[m_piece_to_download].hasBlockToDownload()){
+      for(auto connection : m_connections[m_piece_to_download]){
+        if(!connection.get().m_peer_choking){
+          Block& block{m_all_pieces[m_piece_to_download].getBlockToDownload()};
+          message::Action request{message::Params{message::length::REQUEST, message::ID::request},
+                                  m_piece_to_download, block.getOffset(), block.getSize()};
+          write::sendMessage(connection.get(), request);
+          all_are_choking = false;
+        }
+      }
+      if(all_are_choking) return; 
+    }
+    m_piece_is_set = false;
+  }
 };

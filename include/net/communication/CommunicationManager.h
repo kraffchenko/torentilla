@@ -1,20 +1,17 @@
 #ifndef COMMUNICATIONMANAGER_H
 #define COMMUNICATIONMANAGER_H
 #include <iostream>
-#include "torrent/protocol/PieceManager.h"
+#include "net/Connection.h"
 #include "torrent/File.h"
 using namespace torrent::protocol;
-namespace net{
+namespace net::communication{
   class CommunicationManager{
   public:
     torrent::File& getFile() { return m_file; };
     std::array<std::byte, 20>& getPeerId() { return m_peer_id; };
-    PieceManager& getPieceManager() { return m_piece_manager; };
     CommunicationManager(torrent::File& file,
                          std::array<std::byte, 20>& peer_id)
-    : m_file{file}, m_peer_id{peer_id}, 
-      m_piece_manager{static_cast<size_t>(file.m_metadata.getLength()),
-                      static_cast<size_t>(file.m_metadata.getPieceLength())}
+    : m_file{file}, m_peer_id{peer_id} 
     {
     };
     bool connectionIsPending(net::Connection& connection);
@@ -31,7 +28,6 @@ namespace net{
     std::map<int, net::Connection> m_pending_connections{};
     torrent::File& m_file;
     std::array<std::byte, 20>& m_peer_id;
-    PieceManager m_piece_manager;
   };
 }
 #endif

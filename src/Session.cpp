@@ -37,7 +37,9 @@ void Session::downloadTorrent(const std::string_view dottorrent_path,
           torrent::ResumeFile::pathBasedOnHash(metadata.getInfoHashAsString()))}};
     
   torrent::File download_file{path_to_install, metadata.getName(), resume_file, metadata};
-  net::CommunicationManager com_manager{download_file, m_peer_id}; 
+  net::CommunicationManager com_manager{download_file, m_peer_id};
+  torrent::protocol::PieceManager piece_manager{static_cast<size_t>(download_file.m_metadata.getLength()),
+                                                static_cast<size_t>(download_file.m_metadata.getPieceLength())};
   torrent::LocalPeer local_peer{cntx, com_manager};
   //local_peer.acceptConnection(download_file, m_peer_id);
   std::string ip {"192.168.122.253"};
