@@ -21,7 +21,19 @@ std::array<std::byte, 20> Session::generateID(){
 
   return peer_id;
 }
-void Session::downloadTorrent(const std::string_view dottorrent_path,
+awaitable<void> Session::start(io_context& cntx, net::communication::CommunicationManager& com_manager, PieceManager& piece_manager){
+  torrent::LocalPeer local_peer{cntx};
+////////////////////////////////////////////////
+  std::string ip {"192.168.122.253"};
+  torrent::Peer remote_peer{ip, 6881};
+  //check the com_manager if there is this connection 
+  net::Connection connection{co_await local_peer.connect(remote_peer)};
+  co_await net::communication::write::sendHandshake(connection, com_manager);
+  for(;;){
+    co_await net::communication::read::read(connection, com_manager, piece_manager);
+  }
+}
+awaitable<void> Session::downloadTorrent(const std::string_view dottorrent_path,
                               const std::string_view path_to_install){
   boost::asio::io_context cntx{};
   torrent::dottorrent::Metadata metadata {torrent::dottorrent::fromDotTorrent(dottorrent_path)};
@@ -35,17 +47,14 @@ void Session::downloadTorrent(const std::string_view dottorrent_path,
                           (static_cast<size_t>(metadata.getLength()) / static_cast<size_t>(metadata.getPieceLength()))}
     : torrent::ResumeFile{torrent::ResumeFile::fromFile(
           torrent::ResumeFile::pathBasedOnHash(metadata.getInfoHashAsString()))}};
-    
   torrent::File download_file{path_to_install, metadata.getName(), resume_file, metadata};
-  net::CommunicationManager com_manager{download_file, m_peer_id};
+  CommunicationManager com_manager{download_file, m_peer_id};
   torrent::protocol::PieceManager piece_manager{static_cast<size_t>(download_file.m_metadata.getLength()),
                                                 static_cast<size_t>(download_file.m_metadata.getPieceLength())};
-  torrent::LocalPeer local_peer{cntx, com_manager};
-  //local_peer.acceptConnection(download_file, m_peer_id);
-  std::string ip {"192.168.122.253"};
-  torrent::Peer remote_peer{ip, 6881};
-  //local_peer.acceptConnection(download_file, m_peer_id);
-  local_peer.connect(remote_peer, download_file, m_peer_id);
+  boost::asio::co_spawn(
+        cntx,
+        start(cntx, com_manager, piece_manager),
+        boost::asio::detached);
   cntx.run();
 }
 void Session::createDotTorrent(torrent::dottorrent::Config config){

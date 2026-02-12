@@ -1,5 +1,5 @@
-#include "net/CommunicationManager.h"
-namespace net{
+#include "net/communication/CommunicationManager.h"
+namespace net::communication{
   bool CommunicationManager::connectionExists(std::string& ip){  
     if(m_connections.contains(ip)){
       return true;
@@ -18,12 +18,12 @@ namespace net{
     m_pending_connections.insert({pending_amount, std::move(connection)});
     return pending_amount; 
   }
-  net::Connection& net::CommunicationManager::getPendingConnection(int index){
+  net::Connection& CommunicationManager::getPendingConnection(int index){
     if(m_pending_connections.contains(index)){
       return m_pending_connections.at(index);
     }
   }
-  net::Connection& net::CommunicationManager::getConnection(std::string& ip){
+  net::Connection& CommunicationManager::getConnection(std::string& ip){
     if(m_connections.contains(ip)){
       return m_connections.at(ip);
     }
