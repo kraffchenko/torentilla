@@ -18,12 +18,10 @@ namespace net{
   Connection::Connection(boost::asio::io_context& io_context)
   : m_socket{io_context.get_executor()}
   {
-    m_socket.open(boost::asio::ip::tcp::v4());
   }
   Connection::Connection(boost::asio::any_io_executor io_exec)
   : m_socket {io_exec}
   {
-    m_socket.open(boost::asio::ip::tcp::v4());
   }
   boost::asio::ip::tcp::socket& Connection::getSocket(){
     return m_socket;

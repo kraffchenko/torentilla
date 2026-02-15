@@ -101,7 +101,7 @@ namespace torrent::protocol::message{
   };
   struct Have{
     Params msg_params{};
-    int piece_index{};
+    size_t piece_index{};
     std::vector<std::byte> inByteArray(){
       std::vector<std::byte> byte_array{};
       std::array<std::byte, 4> message_len{getByteArrayFromInt(msg_params.message_len)};
@@ -126,9 +126,9 @@ namespace torrent::protocol::message{
   };
   struct Action{
     Params msg_params{};
-    int index{};
-    int begin{};
-    int requested_length{};
+    size_t index{};
+    int64_t begin{};
+    size_t requested_length{};
     std::vector<std::byte> inByteArray(){
       std::vector<std::byte> byte_array{};
       std::array<std::byte, 4> message_len{getByteArrayFromInt(msg_params.message_len)};
@@ -189,16 +189,16 @@ namespace torrent::protocol::message{
         return State{Params{message_length, message_id}};
       case ID::have:
         return Have{Params{message_length, message_id}, 
-                          getIntFromBytes(&buffer_ref[BytePos::INDEX])};
+                          static_cast<size_t>(getIntFromBytes(&buffer_ref[BytePos::INDEX]))};
       case ID::bitfield:
         return Bitfield{Params{message_length, message_id}, 
                                getBytesInRange(buffer_ref.getRange(BytePos::BITFIELD, message_length))};
       case ID::request:
       case ID::cancel:
         return Action{Params{message_length, message_id}, 
-                            getIntFromBytes(&buffer_ref[BytePos::INDEX]),
+                            static_cast<size_t>(getIntFromBytes(&buffer_ref[BytePos::INDEX])),
                             getIntFromBytes(&buffer_ref[BytePos::BEGIN]),
-                            getIntFromBytes(&buffer_ref[BytePos::REQUESTED_LENGTH])};
+                            static_cast<size_t>(getIntFromBytes(&buffer_ref[BytePos::REQUESTED_LENGTH]))};
       case ID::piece:
         return Piece{Params{message_length, message_id},
                             getIntFromBytes(&buffer_ref[BytePos::INDEX]),
