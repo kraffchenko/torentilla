@@ -14,17 +14,18 @@
 #include "torrent/LocalPeer.h"
 #include "boost/asio.hpp"
 #include "net/communication/CommunicationManager.h"
+#include "net/communication/tcp.h"
 #include "tracker/Request.h"
 using namespace boost::asio;
 class Session{
 public:
   Session();
-  awaitable<void> downloadTorrent(const std::string_view dottorrent_path,
+  awaitable<void> downloadTorrent(boost::asio::io_context& cntx, const std::string_view dottorrent_path,
                        const std::string_view path_to_install);
   std::array<std::byte, 20> const getPeerID(){ return m_peer_id;};
   void createDotTorrent(torrent::dottorrent::Config config);
   void setConnection();
-  awaitable<void> start(io_context& cntx, net::communication::CommunicationManager& com_manager, PieceManager& peer_manager);
+  awaitable<void>startDownloadingProcess(CommunicationManager& com_manager, PieceManager& piece_manager);
 private:
   static std::array<std::byte, 20> generateID();
   std::array<std::byte, 20>m_peer_id {};

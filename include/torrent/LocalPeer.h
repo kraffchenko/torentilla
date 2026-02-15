@@ -19,7 +19,7 @@ namespace torrent{
   public:
     LocalPeer(boost::asio::io_context& io_context);
     awaitable<net::Connection> connect(torrent::Peer& remote_peer);
-    void acceptConnection(torrent::File& file, std::array<std::byte, 20>& peer_id);
+    awaitable<net::Connection> acceptConnection();
   };
 }
 #endif

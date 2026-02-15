@@ -21,7 +21,7 @@ namespace net::communication::write{
     handshake.peer_id = com_manager.getPeerId();
     connection.m_out_buffer.insert(handshake.inByteArray());
     size_t bytes_transferred {co_await async_write(connection.getSocket(), 
-                                                   buffer(connection.m_out_buffer.getRange(0, connection.m_out_buffer.filled())))};
+                              buffer(connection.m_out_buffer.getRange(0, connection.m_out_buffer.filled())))};
     std::cout << "handleHandshake: Handshake was written." << '\n';
     connection.m_out_buffer.reset(bytes_transferred);
   };

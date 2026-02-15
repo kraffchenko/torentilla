@@ -111,9 +111,6 @@ namespace{
     }
     co_return;
   };
-
-
-
   inline void setupMessageBuffer(net::Connection& connection, size_t bytes_transferred){
     connection.m_in_buffer.setFilled(bytes_transferred);
     std::cout << "setupMessageBuffer: " << bytes_transferred << " transported." << '\n';
@@ -193,27 +190,23 @@ namespace{
     }
   };
 }
-
 namespace net::communication::read{
   inline awaitable<void> read(net::Connection& connection,
                    CommunicationManager& com_manager,
                    torrent::protocol::PieceManager& piece_manager) {
-    std::cout << "reading..." << '\n'; 
-    size_t bytes_transferred {co_await connection.getSocket().async_read_some(buffer(connection.m_in_buffer.getAvailableRange()), use_awaitable)};
-    if(connection.m_is_closed){
-      std::cout << "Connection was closed." << '\n';
-      co_return;
-    }
-    if(!connection.m_handshake_checked){
-      co_await processHandshake(connection, com_manager, piece_manager, bytes_transferred);
-    }else{
-      co_await processPayload(connection, com_manager, piece_manager, bytes_transferred);
+    for(;;){
+      std::cout << "reading..." << '\n'; 
+      size_t bytes_transferred {co_await connection.getSocket().async_read_some(buffer(connection.m_in_buffer.getAvailableRange()), use_awaitable)};
+      if(connection.m_is_closed){
+        std::cout << "Connection was closed." << '\n';
+        co_return;
+      }
+      if(!connection.m_handshake_checked){
+        co_await processHandshake(connection, com_manager, piece_manager, bytes_transferred);
+      }else{
+        co_await processPayload(connection, com_manager, piece_manager, bytes_transferred);
+      }
     }
   };
-
-  
-
-
-
 }
 #endif
