@@ -60,12 +60,18 @@ namespace torrent::protocol{
       if(m_all_pieces[i].isCompleted()){
         continue;
       }
-      if(m_connections[i].size() < rarest_piece_owners){
+      size_t owners{m_connections[i].size()};
+      if(owners == 0){
+        continue;
+      }
+      if(owners < rarest_piece_owners){
         rarest_piece_index = i;
-        rarest_piece_owners = m_connections[i].size();
+        rarest_piece_owners = owners;
       }
     }
-    //add error handling
+    if(rarest_piece_index == SIZE_MAX){
+      return;
+    }
     m_piece_to_download = rarest_piece_index;
     m_piece_is_set = true;
   };
@@ -74,19 +80,26 @@ namespace torrent::protocol{
       return;
     }
     setPieceToDownload();
-    bool all_are_choking{true};
+    if(!m_piece_is_set){
+      return;
+    }
     while(m_all_pieces[m_piece_to_download].hasBlockToDownload()){
+      bool all_are_choking{true};
+      std::cout  << "gerer" << '\n';
       for(auto connection : m_connections[m_piece_to_download]){
+        std::cout  << "ge2rer" << '\n';
         if(!connection.get().m_peer_choking){
           Block& block{m_all_pieces[m_piece_to_download].getBlockToDownload()};
           message::Action request{message::Params{message::length::REQUEST, message::ID::request},
                                   m_piece_to_download, block.getOffset(), block.getSize()};
-          write::sendMessage(connection.get(), request);
+          co_spawn(connection.get().getSocket().get_executor(), write::sendMessage(connection.get(), request), detached);
           all_are_choking = false;
         }
       }
       if(all_are_choking) return; 
     }
     m_piece_is_set = false;
-  }
+  };
+
+
 };

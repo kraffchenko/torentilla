@@ -52,6 +52,7 @@ awaitable<void> Session::downloadTorrent(boost::asio::io_context& cntx, const st
   torrent::Peer remote_peer{ip, 6881};
   net::Connection out_con{co_await local_peer.connect(remote_peer)};
   co_spawn(cntx, startCommunication(std::move(out_con), com_manager, piece_manager), detached);
+  co_spawn(cntx, scheduleDownloadProcess(cntx, piece_manager, com_manager), detached);
   for(;;){
     net::Connection in_con {co_await local_peer.acceptConnection()};
     co_spawn(cntx, startCommunication(std::move(in_con), com_manager, piece_manager), detached);

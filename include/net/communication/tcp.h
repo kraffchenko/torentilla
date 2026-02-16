@@ -15,9 +15,19 @@ namespace net::communication{
       std::cout << "Connection with " << remote_ip << " is closed due to redundancy";
       co_return;
     }
+
     com_manager.addConnection(connection);
     co_await net::communication::write::sendHandshake(connection, com_manager);
     co_await net::communication::read::read(connection, com_manager, piece_manager);
+  };
+  inline awaitable<void> scheduleDownloadProcess(boost::asio::io_context& cntx,
+                                                 PieceManager& piece_manager,
+                                                 CommunicationManager& com_manager) {
+    while(!piece_manager.allPiecesAreCompleted()){
+        piece_manager.startDownloadProcess();
+        boost::asio::system_timer timer{cntx, chrono::milliseconds(100)};
+        co_await timer.async_wait(use_awaitable);
+    }
   };
 };
 #endif

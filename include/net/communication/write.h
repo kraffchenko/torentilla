@@ -10,7 +10,7 @@ namespace net::communication::write{
                           T message){
     std::cout << "sendMessage: Moving a message into the buffer..." << '\n';
     connection.m_out_buffer.insert(message.inByteArray());
-    co_await async_write(connection.getSocket(), buffer(connection.m_out_buffer.getRange(0, connection.m_out_buffer.filled())));
+    co_await async_write(connection.getSocket(), buffer(connection.m_out_buffer.getRange((connection.m_out_buffer.length() - connection.m_out_buffer.filled()), connection.m_out_buffer.length())));
     std::cout << "handleSend: Message was written" << '\n';
     connection.m_out_buffer.reset(connection.m_out_buffer.filled());
   };

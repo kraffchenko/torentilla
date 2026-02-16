@@ -17,7 +17,7 @@ namespace net::communication::read{
                    PieceManager& piece_manager);
 }
 namespace{
-  inline awaitable<void> handleMessage(net::Connection& connection, message::State message, PieceManager& piece_manager, CommunicationManager& com_manager){
+  inline void handleMessage(net::Connection& connection, message::State message, PieceManager& piece_manager, CommunicationManager& com_manager){
     if(message.msg_params.id == message::ID::choke){
       std::cout << "Choke sent." << '\n';
       connection.m_peer_choking = true; 
@@ -31,29 +31,28 @@ namespace{
       std::cout << "Not interested sent." << '\n';
       connection.m_peer_interested = false;
     }
-    co_return;
   };
-  inline awaitable<void> handleMessage(net::Connection& connection, 
+  inline void handleMessage(net::Connection& connection, 
                             message::Have message, 
                             PieceManager& piece_manager,
                             CommunicationManager& com_manager){
     torrent::protocol::Bitfield& bitfield{com_manager.getFile().m_resume_file.getBitfield()};
     if(bitfield.getPiecesAmount() < message.piece_index){
       com_manager.closeConnection(connection);
-      co_return;
+      return;
     }
     if(!bitfield.hasPiece(message.piece_index)){
       piece_manager.addConnection(message.piece_index, connection);
       if(!connection.m_am_interested){
         message::State interested{message::Params{message::length::STATE, message::ID::interested}};
-        co_await write::sendMessage(connection, interested); 
+        co_spawn(connection.getSocket().get_executor(), write::sendMessage(connection, interested), detached); 
         connection.m_am_interested = true;
       }else{
         
       }
     }
   };
-  inline awaitable<void> handleMessage(net::Connection& connection,
+  inline void handleMessage(net::Connection& connection,
                             message::Bitfield message,
                             torrent::protocol::PieceManager& piece_manager,
                             CommunicationManager& com_manager){
@@ -62,25 +61,26 @@ namespace{
     std::vector<std::byte> remote_bitfield{message.bitfield_as_byte_array};
     if(!(local_bitfield.getBitfield().size() == remote_bitfield.size())){
       com_manager.closeConnection(connection);
-      co_return;
+      return;
     }
     std::vector<size_t> missing_pieces{getMissingPieces(local_bitfield.getBitfield(), remote_bitfield)};
     if(missing_pieces.back() > local_bitfield.getPiecesAmount()){
       com_manager.closeConnection(connection);
-      co_return;
+      return;
     }
     if(missing_pieces.size() < 1){
-      co_return;
+      return;
     }
     message::State interested{message::Params{message::length::STATE, message::ID::interested}};
-    co_await write::sendMessage(connection, interested); 
+    co_spawn(connection.getSocket().get_executor(), write::sendMessage(connection, interested), detached); 
     connection.m_am_interested = true;
     for(size_t index : missing_pieces){
       piece_manager.addConnection(index, connection);
     } 
     connection.m_bitfield_received = true;
+    std::cout << "1" << '\n';
   };
-  inline awaitable<void> handleMessage(net::Connection& connection,
+  inline void handleMessage(net::Connection& connection,
                             message::Action message,
                             torrent::protocol::PieceManager& piece_manager,
                             CommunicationManager& com_manager){
@@ -89,9 +89,8 @@ namespace{
     }else{
       connection.getSocket().shutdown(ip::tcp::socket::shutdown_send);
     } 
-    co_return;
   };
-  inline awaitable<void> handleMessage(net::Connection& connection,
+  inline void handleMessage(net::Connection& connection,
                             message::Piece message,
                             torrent::protocol::PieceManager& piece_manager,
                             CommunicationManager& com_manager){
@@ -109,7 +108,6 @@ namespace{
     if(!piece_manager.getPiece(message.index).markBlockAsDone({message.begin, message.block.size()})){
      com_manager.closeConnection(connection); 
     }
-    co_return;
   };
   inline void setupMessageBuffer(net::Connection& connection, size_t bytes_transferred){
     connection.m_in_buffer.setFilled(bytes_transferred);
@@ -145,12 +143,12 @@ namespace{
       return false;
     }
   }
-  inline awaitable<void> processPayload(net::Connection& connection, CommunicationManager& com_manager, torrent::protocol::PieceManager& piece_manager, size_t bytes_transferred){
+  inline void processPayload(net::Connection& connection, CommunicationManager& com_manager, torrent::protocol::PieceManager& piece_manager, size_t bytes_transferred){
     setupMessageBuffer(connection, bytes_transferred);
     if(connection.m_in_buffer.filled() >= connection.m_in_buffer.length()){
       message::ID message_id {message::getMessageID(connection.m_in_buffer)};
       std::cout << "processPayload: Processing message..." << '\n';
-      co_await std::visit([&connection, &com_manager, &piece_manager](auto&& message) -> awaitable<void> { co_await handleMessage(connection, message, piece_manager, com_manager); }, 
+      std::visit([&connection, &com_manager, &piece_manager](auto&& message) {  handleMessage(connection, message, piece_manager, com_manager); }, 
                  message::createMessageFromBuffer(message_id, connection.m_in_buffer.length()-1, connection.m_in_buffer));
       size_t processed_bytes {connection.m_in_buffer.length()};
       connection.m_in_buffer.reset(processed_bytes);
@@ -158,13 +156,13 @@ namespace{
       if(connection.m_in_buffer.filled() > processed_bytes){
         std::cout << "processPayload: Buffer contains extra bytes, repeating processing." << '\n';
         connection.m_in_buffer.rotate(processed_bytes);
-        co_await processPayload(connection, com_manager, piece_manager, bytes_transferred - processed_bytes);
+        processPayload(connection, com_manager, piece_manager, bytes_transferred - processed_bytes);
       }
     }else{
       std::cout << "processPayload: Message not complete, repeating read without reset." << '\n';
     }
   };
-  inline awaitable<void> processHandshake(net::Connection& connection,
+  inline void processHandshake(net::Connection& connection,
                                CommunicationManager& com_manager,
                                torrent::protocol::PieceManager& piece_manager,
                                size_t bytes_transferred){
@@ -172,21 +170,21 @@ namespace{
     if(!(connection.m_in_buffer.filled() >= message::Handshake::m_default_length)){
       std::cout << "processHandshake: Handshake not complete, repeating read without reset." << '\n';
       connection.m_in_buffer.processing(true); 
-      co_return;
+      return;
     }
     message::Handshake local_handshake{.info_hash = com_manager.getFile().m_metadata.getInfoHash(),
                                        .peer_id = com_manager.getPeerId()};
     message::Handshake remote_handshake{message::createHandshakeFromBuffer(connection.m_in_buffer)};
     if(!handshakeIsSame(connection, local_handshake, remote_handshake)){
-     co_return; 
+     return; 
     }
     connection.m_in_buffer.reset(connection.m_in_buffer.filled());
     message::State choke{message::Params{message::length::STATE, message::ID::choke}};
-    co_await write::sendMessage(connection, choke);
+    co_spawn(connection.getSocket().get_executor(), write::sendMessage(connection, choke), detached);
     if(bytes_transferred > message::Handshake::m_default_length){
       std::cout << "processHandshake: Buffer contains extra bytes, calling processPayload..." << '\n';
       connection.m_in_buffer.rotate(message::Handshake::m_default_length);
-      co_await processPayload(connection, com_manager, piece_manager, bytes_transferred - message::Handshake::m_default_length);
+      processPayload(connection, com_manager, piece_manager, bytes_transferred - message::Handshake::m_default_length);
     }
   };
 }
@@ -202,9 +200,9 @@ namespace net::communication::read{
         co_return;
       }
       if(!connection.m_handshake_checked){
-        co_await processHandshake(connection, com_manager, piece_manager, bytes_transferred);
+         processHandshake(connection, com_manager, piece_manager, bytes_transferred);
       }else{
-        co_await processPayload(connection, com_manager, piece_manager, bytes_transferred);
+         processPayload(connection, com_manager, piece_manager, bytes_transferred);
       }
     }
   };

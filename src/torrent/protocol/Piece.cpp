@@ -33,7 +33,7 @@ namespace torrent::protocol{
     }
   }
   bool Piece::hasBlockToDownload(){
-   if(m_pending_blocks != 0){
+   if(m_blocks_remained > 0){
       return true;
     }else{
       return false;
